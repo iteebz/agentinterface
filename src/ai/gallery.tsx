@@ -1,3 +1,6 @@
+/**
+ * Image gallery with lightbox view.
+ */
 import React, { useState } from 'react';
 
 export interface GalleryImage {
@@ -65,8 +68,8 @@ function GalleryComponent(props: GalleryProps) {
               ×
             </button>
             <img
-              src={images[currentImage].src}
-              alt={images[currentImage].alt}
+              src={images[currentImage]?.src || ''}
+              alt={images[currentImage]?.alt || ''}
               className="max-h-full max-w-full object-contain"
               onClick={(e) => e.stopPropagation()}
             />

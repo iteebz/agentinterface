@@ -1,8 +1,8 @@
 # Examples
 
-## Response Shaping
+## Text to Components
 
-Transform agent text into UI components:
+Direct component transformation:
 
 ```python
 from agentinterface import shape, protocol
@@ -25,9 +25,9 @@ shaped = await shape(
 # ]
 ```
 
-## Full Agent Integration
+## Agent Integration
 
-Complete agent → UI workflow with bidirectional communication:
+Full bidirectional workflow:
 
 ```python
 from agentinterface import ai
@@ -36,20 +36,20 @@ from agentinterface import ai
 async def agent(query: str) -> str:
     return f"Sales analysis for: {query}"
 
-# Full integration
+# Core integration pattern
 agent = ai(agent, llm=your_llm)
 async for event in agent("Show Q3 dashboard"):
     if event["type"] == "component":
-        # Render components in UI
-        render(JSON.stringify(event["data"]["components"]))
+        # Component rendering
+        render(event["data"]["components"])
     else:
-        # Agent events (passthrough)
+        # Passthrough
         yield event
 ```
 
-## Component Registry Protocol
+## Registry Protocol
 
-Generate LLM instructions for available components:
+Generate component instructions:
 
 ```python
 from agentinterface import protocol
@@ -61,12 +61,12 @@ instructions = protocol(["table", "card", "timeline"])
 instructions = protocol()  # Auto-discovers from ai.json
 ```
 
-## TypeScript Rendering
+## Component Rendering
 
-Render component JSON in React:
+Render JSON in React:
 
 ```typescript
-import { render } from './renderer';
+import { render } from 'agentinterface';
 
 const componentData = [
   {"type": "card", "data": {"title": "Results"}},
@@ -77,13 +77,13 @@ const componentData = [
 ];
 
 function Dashboard() {
-  return <div>{render(JSON.stringify(componentData))}</div>;
+  return <div>{render(JSON.stringify(componentData), components)}</div>;
 }
 ```
 
 ## Custom Components
 
-Add domain-specific components:
+Add specialized components:
 
 ```typescript
 // components/Portfolio.tsx
@@ -122,13 +122,13 @@ from agentinterface import shape
 try:
     shaped = await shape(response, context, llm)
 except Exception:
-    # Graceful fallback to original text
-    shaped = response
+    # Fallback to text
+    shaped = [{"type": "markdown", "data": {"content": response}}]
 ```
 
-## Agent Compatibility
+## Compatibility
 
-Works with any agent pattern:
+Works with any pattern:
 
 ```python
 # Callable agents

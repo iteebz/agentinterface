@@ -15,12 +15,19 @@
     "scripts"
   ],
   "scripts": {
-    "dev": "echo 'Just import the fucking components'",
-    "test": "node tests/autodiscovery.test.js",
-    "format": "prettier --write 'src/**/*.{ts,tsx}'",
-    "lint": "eslint src/"
+    "discover": "node scripts/discover.mjs",
+    "dev": "echo 'Import components directly'",
+    "test": "pnpm run test:autodiscovery && pnpm run test:renderer",
+    "test:autodiscovery": "node tests/autodiscovery.test.js",
+    "test:renderer": "pnpm exec ts-node tests/renderer.test.ts",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write 'src/**/*.{ts,tsx}' 'tests/**/*.{ts,tsx}'",
+    "lint": "eslint src/ tests/"
   },
   "dependencies": {
+    "@babel/parser": "^7.28.4",
+    "@babel/traverse": "^7.28.4",
+    "@babel/types": "^7.28.4",
     "@radix-ui/react-collapsible": "^1.1.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -32,12 +39,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.30.0",
+    "@types/node": "^24.3.1",
     "@types/react": "^19.0.8",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@typescript-eslint/eslint-plugin": "^8.41.0",
     "@typescript-eslint/parser": "^8.41.0",
     "eslint": "^9.30.0",
     "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.7.2"
   },
   "peerDependencies": {

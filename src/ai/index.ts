@@ -15,7 +15,7 @@
 
 // Core AIP Components - All with metadata exports
 export { Timeline, metadata as TimelineMetadata } from './timeline';
-export { Markdown, metadata as MarkdownMetadata } from './markdown';
+export { Prose, metadata as ProseMetadata } from './prose';
 export { Table, metadata as TableMetadata } from './table';
 export { Reference, metadata as ReferenceMetadata } from './reference';
 export { Gallery, metadata as GalleryMetadata } from './gallery';

@@ -153,31 +153,39 @@ def test_protocol_component_selection():
     assert "composition" in instructions.lower() or "array" in instructions.lower()
 
 
-def test_callback_server_isolation():
-    """Test that CallbackServer manages state properly"""
-    from agentinterface.ai import CallbackServer
+def test_callback_protocol_implementation():
+    """Test that callback protocol is implemented properly"""
+    from agentinterface.callback import Callback, Http, _get_shared_server
 
-    server = CallbackServer(port=9999)
-    assert server.port == 9999
-    assert len(server.callbacks) == 0
-    assert not server._server_started
+    # Test Http implementation
+    callback = Http(port=9999)
+    assert callback.endpoint().startswith("http://")
+    assert ":9999/" in callback.endpoint()
+
+    # Test shared server initialization
+    server = _get_shared_server(9999)
+    assert callback.id in server.callbacks
 
 
 @pytest.mark.asyncio
-async def test_callback_context_cleanup():
-    """Test callback context manager cleans up properly"""
-    from agentinterface.ai import CallbackServer
+async def test_callback_lifecycle_management():
+    """Test callback lifecycle management"""
+    from agentinterface.callback import Http, _get_shared_server
 
-    server = CallbackServer()
-    callback_id = "test-callback-123"
+    callback = Http(id="test-lifecycle-123")
+    server = _get_shared_server()
 
-    # Test context cleanup
-    async with server.callback_context(callback_id) as future:
-        assert callback_id in server.callbacks
-        assert isinstance(future, asyncio.Future)
+    # Should be registered on creation
+    assert "test-lifecycle-123" in server.callbacks
+    assert isinstance(server.callbacks["test-lifecycle-123"], asyncio.Future)
 
-    # Should be cleaned up after context exit
-    assert callback_id not in server.callbacks
+    # Simulate callback triggering
+    server.callbacks["test-lifecycle-123"].set_result({"action": "test", "data": "value"})
+
+    # Should get result and clean up
+    result = await callback.await_interaction()
+    assert result == {"action": "test", "data": "value"}
+    assert "test-lifecycle-123" not in server.callbacks
 
 
 def test_protocol_fallback_components():

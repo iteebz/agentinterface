@@ -1,3 +1,6 @@
+/**
+ * Citations and expandable references.
+ */
 import React, { useState } from 'react';
 
 interface ReferenceItem {

@@ -6,6 +6,8 @@ DEFAULT_MODELS = {
     "anthropic": "claude-3-5-haiku-20241022",
 }
 
-DEFAULT_PROVIDERS = {"llm": "openai", "embedder": "openai"}
+DEFAULT_PROVIDER = "openai"
 
-DEFAULT_PORTS = {"server": 8228}
+# Network
+TIMEOUT = 300
+RETRIES = 3

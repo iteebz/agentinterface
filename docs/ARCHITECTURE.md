@@ -1,6 +1,6 @@
 # Architecture
 
-**Key innovations:** Component reasoning via shaper LLM, autodiscovery system, bidirectional callbacks, recursive composition
+**Core components:** Shaper LLM, component autodiscovery, callbacks, recursive rendering
 
 ## System Design
 
@@ -39,13 +39,19 @@ const COMPONENTS = {
 
 ### Recursive Renderer
 ```typescript
-function renderItem(item: any): React.ReactNode {
-  if (Array.isArray(item)) {
-    return <div className="flex gap-4">{/* Horizontal */}</div>;
+// From render.tsx
+function render(agentJSON: string, components): React.ReactNode {
+  function renderItem(item: any): React.ReactNode {
+    if (Array.isArray(item)) {
+      return <div className="flex gap-4">{/* Horizontal */}</div>;
+    }
+    
+    const Component = components[item.type];
+    return <Component {...processData(item.data)} />;
   }
   
-  const Component = COMPONENTS[item.type];
-  return <Component {...processData(item.data)} />;
+  const parsed = JSON.parse(agentJSON);
+  return renderItem(parsed);
 }
 ```
 
@@ -68,30 +74,35 @@ export const metadata = {
 ```javascript
 // scripts/discover.mjs
 1. Scan .tsx files for metadata exports
-2. Extract schema + description via eval()
-3. Generate ai.json registry
+2. Extract schema + description via AST parsing
+3. Generate ai.json registry and ai.tsx wrapper
 4. Components automatically available to shaper LLM
+5. Protocol() dynamically generates LLM instructions from ai.json
 ```
 
 ## Bidirectional Communication
 
-### Callback Architecture
+### Callback Protocol
 ```python
-# ai.py callback server
-@app.post("/callback/{callback_id}")
-async def handle_callback(callback_id: str, request: dict):
-    # User interaction → agent continuation
-    if callback_id in pending_callbacks:
-        callbacks[callback_id].set_result(request)
+# callback.py
+@runtime_checkable
+class Callback(Protocol):
+    async def await_interaction(self, timeout: int = 300) -> dict:
+        """Wait for user interaction."""
+        ...
+    
+    def endpoint(self) -> str:
+        """Get endpoint URL."""
+        ...
 ```
 
 ### Interaction Flow
 ```
-1. Agent generates component with callback_id
+1. Component includes callback endpoint
 2. User interacts with component
-3. Component POSTs to callback endpoint  
-4. Agent receives interaction data
-5. Agent continues conversation with user choice
+3. Component sends data to endpoint
+4. Awaiting agent receives data
+5. Agent continues with user choice
 ```
 
 ## Composition System
@@ -130,26 +141,26 @@ Return JSON array. Components can contain other components.
 """
 ```
 
-**Intelligence:** Shaper LLM analyzes agent response and selects optimal presentation components based on content type and user context
+**Function:** Shaper LLM converts text to components using context
 
 ## Technical Elegance
 
 **Separation of Concerns:**
-- **Agent:** Domain reasoning, generates natural language response
-- **Shaper LLM:** Analyzes response content, selects optimal UI components
-- **Renderer:** Transforms component JSON into interactive React interface
+- **Agent:** Domain knowledge
+- **Shaper:** Component selection
+- **Renderer:** Component instantiation
 
 **Universal Compatibility:**
-- Works with any agent framework
-- No agent modification required
-- Graceful fallback to text
+- Framework-agnostic
+- Zero agent modification
+- Text fallback
 
-**Infinite Extensibility:**
-- Component metadata exports
-- Automatic registry generation  
-- Type-safe component resolution
+**Extensibility:**
+- Metadata exports
+- Auto-discovery
+- Type safety
 
-**Zero Integration Friction:**
-- Single `ai()` wrapper function
-- Automatic component discovery
-- Bidirectional communication built-in
+**Zero Friction:**
+- `ai()` wrapper
+- Auto-discovery
+- Built-in callbacks

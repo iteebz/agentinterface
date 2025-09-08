@@ -1,19 +1,19 @@
-# AgentInterface vs Anthropic Artifacts
+# Component Comparison
 
-## What Anthropic Built
+## Direct Artifacts
 
-Claude manually decides when to render artifacts:
+Manual component selection:
 
 ```
 User: "Write a React component"
 Claude: [Automatically renders in code artifact container]
 ```
 
-**Limitation:** Only works with Claude. Manual component selection.
+**Limitations:** Single source. Manual selection.
 
-## What AgentInterface Enables
+## AgentInterface
 
-Any agent systematically selects optimal UI:
+Universal component selection:
 
 ```python
 # Any agent becomes artifact-capable
@@ -22,30 +22,30 @@ result = await agent("Write a React component")
 # Returns: (text, [{"type": "code", "data": {"language": "javascript", "content": "..."}}])
 ```
 
-**Advancement:** Universal agent compatibility. Systematic component selection.
+**Advantages:** Universal. Systematic. Extensible.
 
 ## Technical Comparison
 
-| Feature | Anthropic Artifacts | AgentInterface |
-|---------|-------------------|----------------|
-| Agent Support | Claude only | Universal |
-| Component Types | Fixed (code, docs) | Extensible ecosystem |
-| Selection Logic | Manual heuristics | LLM-driven optimization |
-| Composition | Single artifacts | Infinite nesting |
-| Bidirectional | Limited | Full callback support |
+| Feature | Direct Artifacts | AgentInterface |
+|---------|----------------|----------------|
+| Agents | Limited | Universal |
+| Components | Fixed | Extensible |
+| Selection | Manual | LLM-driven |
+| Composition | Single | Nested |
+| Callbacks | Limited | Built-in |
 
-## Architecture Evolution
+## Key Differences
 
-**Anthropic's Innovation:** Agents can trigger structured UI beyond text
+**Direct artifacts:** Specific agent, fixed component types
 
-**AgentInterface Extension:** 
-- Any agent, not just Claude
-- Any component type, not just artifacts  
-- Systematic selection, not manual heuristics
-- Ecosystem extensibility, not fixed types
+**AgentInterface:** 
+- Universal agent support
+- Extensible component system
+- LLM-driven selection
+- Developer-controlled integration
 
-## Strategic Positioning
+## Positioning
 
-AgentInterface builds on Anthropic's core insight while generalizing it into infrastructure. This enables the artifact experience for any agent framework while expanding beyond code/document containers.
+AgentInterface generalizes component selection to any agent, expanding beyond fixed containers to a complete component ecosystem.
 
-**Anthropic proved the concept. AgentInterface scales the implementation.**
+**Universal. Extensible. Zero ceremony.**

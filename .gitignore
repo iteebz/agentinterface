@@ -61,5 +61,6 @@ Thumbs.db
 # Environment variables
 .env
 
-# Generated component registry
+# Generated component files
 ai.json
+ai.tsx

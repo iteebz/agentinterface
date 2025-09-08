@@ -1,9 +1,12 @@
-export { Prose as Markdown } from '../prose';
+/**
+ * Human prose and writing content renderer.
+ */
+export { Prose } from '../prose';
 
 // AIP Metadata - autodiscovery pattern
 export const metadata = {
-  type: 'markdown',
-  description: 'Rendered markdown content with styling',
+  type: 'prose',
+  description: 'Human prose and writing content',
   schema: {
     type: 'object',
     properties: {

@@ -1,14 +1,14 @@
 # AgentInterface Python
 
-Agent reasoning applied to UI component selection.
+Agents choose components. Universal agent wrapper.
 
 ```python
 from agentinterface import ai
 
-# Wrap any agent
+# Universal wrapper
 agent = ai(your_agent, llm)
 result = await agent("Show sales data")
-# Returns: (text, [{"type": "table", "data": {...}}])
+# Returns: (text, components)
 ```
 
 ## Installation

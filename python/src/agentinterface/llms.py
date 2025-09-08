@@ -4,7 +4,7 @@ import os
 import time
 from typing import Any, Callable, Optional, Protocol, Union, runtime_checkable
 
-from .constants import DEFAULT_MODELS
+from .constants import DEFAULT_MODELS, DEFAULT_PROVIDER
 from .logger import logger
 
 _rotators = {}
@@ -154,7 +154,7 @@ class LLM(Protocol):
         ...
 
 
-def llm(provider: Union[str, LLM] = "openai") -> LLM:
+def llm(provider: Union[str, LLM] = DEFAULT_PROVIDER) -> LLM:
     """Create or pass through LLM provider.
 
     Args:

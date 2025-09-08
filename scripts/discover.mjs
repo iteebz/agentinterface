@@ -1,346 +1,373 @@
 #!/usr/bin/env node
 /**
- * AUTODISCOVERY - Component scanner per ARCHITECTURE.md spec
+ * AUTODISCOVERY - Universal component scanner for AgentInterface
  * 
  * Scans TypeScript files for component metadata exports
- * Generates ai.json registry for cross-language consumption
+ * Generates ai.json registry and ai.tsx wrapper
  */
 
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { parse } from '@babel/parser';
+import traverse from '@babel/traverse';
+import * as t from '@babel/types';
 
+// Setup
+const traverseDefault = traverse.default || traverse;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Extract metadata via regex - SAFER THAN EVAL, SIMPLER THAN AST
+ * AST Parser - Extracts component metadata from TSX files
  */
-function extractMetadata(code, filepath) {
-  // Match: export const metadata = { ... };
-  const metadataRegex = /export\s+const\s+metadata\s*=\s*({[\s\S]*?});/;
-  const match = code.match(metadataRegex);
-  
-  if (!match) return null;
-  
-  try {
-    // Convert JS object literal to JSON (safe for simple objects)
-    let objectLiteral = match[1];
-    
-    // Basic JS to JSON conversion
-    objectLiteral = objectLiteral
-      .replace(/(\w+):/g, '"$1":')        // Quote unquoted keys
-      .replace(/'/g, '"')                 // Single to double quotes
-      .replace(/,(\s*[}\]])/g, '$1');     // Remove trailing commas
-    
-    const metadata = JSON.parse(objectLiteral);
-    
-    return {
-      type: metadata.type,
-      description: metadata.description,
-      schema: metadata.schema,
-      category: metadata.category || 'general',
-      file: path.relative(process.cwd(), filepath)
-    };
-  } catch (error) {
-    console.warn(`⚠️  Failed to parse metadata in ${filepath}: ${error.message}`);
-    return null;
-  }
-}
-
-/**
- * Find all .tsx files in directory
- */
-function findTsxFiles(dir, maxDepth = 3, currentDepth = 0) {
-  if (currentDepth > maxDepth) return [];
-  
-  const results = [];
-  
-  try {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
+const Parser = {
+  /**
+   * Extract metadata from TSX file
+   */
+  extract(code, filepath) {
+    try {
+      const ast = parse(code, { sourceType: 'module', plugins: ['jsx', 'typescript'] });
+      let metadata = null;
       
-      if (entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.includes('node_modules')) {
-        results.push(...findTsxFiles(fullPath, maxDepth, currentDepth + 1));
-      } else if (entry.isFile() && entry.name.endsWith('.tsx')) {
-        results.push(fullPath);
-      }
-    }
-  } catch (error) {
-    // Skip inaccessible directories
-  }
-  
-  return results;
-}
-
-/**
- * Scan core AgentInterface components
- */
-function scanCoreComponents() {
-  console.log('🔍 Scanning core AgentInterface components...');
-  
-  const coreDir = path.join(__dirname, '../src/ai');
-  const files = findTsxFiles(coreDir, 1); // Only direct files
-  
-  const components = [];
-  
-  for (const file of files) {
-    const code = fs.readFileSync(file, 'utf8');
-    const metadata = extractMetadata(code, file);
-    
-    if (metadata) {
-      components.push({ ...metadata, source: 'agentinterface' });
-      console.log(`   ✓ ${metadata.type}: ${metadata.description}`);
-    }
-  }
-  
-  return components;
-}
-
-/**
- * Scan current project for AIP components
- */
-function scanCurrentProjectComponents() {
-  console.log('🎯 Scanning current project for AIP components...');
-  
-  const results = [];
-  const cwd = process.cwd();
-  
-  // Common component locations in projects
-  const possiblePaths = [
-    'src/components/ai',
-    'components/ai', 
-    'web/src/components/ai',
-    'app/components/ai'
-  ];
-  
-  for (const relativePath of possiblePaths) {
-    const fullPath = path.join(cwd, relativePath);
-    if (fs.existsSync(fullPath)) {
-      console.log(`   📁 Found components at: ${relativePath}`);
-      const files = findTsxFiles(fullPath, 2);
-      const projectName = getProjectName(cwd);
-      results.push(...scanFiles(files, projectName));
-    }
-  }
-  
-  return results;
-}
-
-/**
- * Scan ecosystem packages for AIP components  
- */
-function scanEcosystemComponents() {
-  console.log('🌍 Scanning ecosystem for published AIP components...');
-  
-  const results = [];
-  const cwd = process.cwd();
-  
-  // Scan node_modules for published AIP packages
-  const scanDirs = [
-    'node_modules/*/src/components/ai',
-    'node_modules/@*/*/src/components/ai',
-  ];
-  
-  for (const scanPattern of scanDirs) {
-    const fullPattern = path.resolve(cwd, scanPattern);
-    const baseDir = path.dirname(fullPattern);
-    
-    if (scanPattern.includes('*')) {
-      // Handle glob patterns for node_modules
-      const parentDir = path.dirname(baseDir);
-      if (fs.existsSync(parentDir)) {
-        try {
-          const packages = fs.readdirSync(parentDir, { withFileTypes: true })
-            .filter(d => d.isDirectory() && !d.name.startsWith('.'))
-            .slice(0, 10); // Limit for performance
-            
-          for (const pkg of packages) {
-            const componentDir = path.join(parentDir, pkg.name, 'src/components/ai');
-            if (fs.existsSync(componentDir)) {
-              const files = findTsxFiles(componentDir, 2);
-              results.push(...scanFiles(files, pkg.name));
+      // Find exported metadata variable
+      traverseDefault(ast, {
+        ExportNamedDeclaration(path) {
+          const declaration = path.node.declaration;
+          if (t.isVariableDeclaration(declaration)) {
+            const declarator = declaration.declarations[0];
+            if (t.isIdentifier(declarator.id) && declarator.id.name === 'metadata') {
+              metadata = Parser.extractValue(declarator.init);
             }
           }
-        } catch (error) {
-          // Skip inaccessible node_modules
+        }
+      });
+      
+      if (!metadata) return null;
+      
+      return {
+        type: metadata.type,
+        description: metadata.description,
+        schema: metadata.schema,
+        category: metadata.category || 'general',
+        file: path.relative(process.cwd(), filepath)
+      };
+    } catch (error) {
+      console.warn(`Failed to parse metadata in ${filepath}: ${error.message}`);
+      return null;
+    }
+  },
+  
+  /**
+   * Extract values from AST nodes recursively
+   */
+  extractValue(node) {
+    if (t.isStringLiteral(node)) return node.value;
+    if (t.isTemplateLiteral(node)) return node.quasis[0]?.value?.cooked || '';
+    if (t.isNumericLiteral(node) || t.isBooleanLiteral(node)) return node.value;
+    if (t.isArrayExpression(node)) return node.elements.map(this.extractValue).filter(Boolean);
+    if (t.isObjectExpression(node)) {
+      const obj = {};
+      for (const prop of node.properties) {
+        if (t.isObjectProperty(prop)) {
+          const key = t.isIdentifier(prop.key) ? prop.key.name : prop.key.value;
+          obj[key] = this.extractValue(prop.value);
         }
       }
-    } else {
-      // Direct path scanning
-      if (fs.existsSync(fullPattern)) {
-        console.log(`   📁 Found ecosystem path: ${fullPattern}`);
-        const files = findTsxFiles(fullPattern, 2);
-        const packageName = path.basename(path.dirname(path.dirname(path.dirname(fullPattern))));
-        results.push(...scanFiles(files, packageName));
-      } else {
-        console.log(`   ❌ Path not found: ${fullPattern}`);
-      }
+      return obj;
     }
+    return null;
   }
-  
-  return results;
-}
+};
 
 /**
- * Get project name from package.json or directory
+ * FileSystem - Handles file operations and discovery
  */
-function getProjectName(cwd) {
-  try {
+const FileSystem = {
+  /**
+   * Find all TSX files in a directory recursively
+   */
+  findTsxFiles(dir, maxDepth = 3, currentDepth = 0) {
+    if (currentDepth > maxDepth) return [];
+    const results = [];
+    
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory() && !entry.name.startsWith('.') && !entry.name.includes('node_modules')) {
+          results.push(...this.findTsxFiles(fullPath, maxDepth, currentDepth + 1));
+        } else if (entry.isFile() && entry.name.endsWith('.tsx')) {
+          results.push(fullPath);
+        }
+      }
+    } catch (error) { /* Skip inaccessible directories */ }
+    
+    return results;
+  },
+  
+  /**
+   * Get project name from package.json or directory
+   */
+  getProjectName(cwd) {
+    try {
+      const packageJsonPath = path.join(cwd, 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        return packageJson.name || path.basename(cwd);
+      }
+    } catch (error) { /* Fall back to directory name */ }
+    return path.basename(cwd);
+  },
+  
+  /**
+   * Check if running from AgentInterface itself
+   */
+  isAgentInterfaceProject(cwd) {
     const packageJsonPath = path.join(cwd, 'package.json');
     if (fs.existsSync(packageJsonPath)) {
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      return packageJson.name || path.basename(cwd);
+      try {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        return packageJson.name === 'agentinterface';
+      } catch (error) { return false; }
     }
-  } catch (error) {
-    // Fall back to directory name
+    return false;
   }
-  return path.basename(cwd);
-}
+};
 
 /**
- * Detect if we're running from AgentInterface itself
+ * ComponentScanner - Discovers components across different locations
  */
-function isAgentInterfaceProject(cwd) {
-  const packageJsonPath = path.join(cwd, 'package.json');
-  if (fs.existsSync(packageJsonPath)) {
-    try {
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-      return packageJson.name === 'agentinterface';
-    } catch (error) {
-      return false;
-    }
-  }
-  return false;
-}
-
-/**
- * Scan files and extract metadata
- */
-function scanFiles(files, packageName) {
-  const components = [];
-  
-  for (const file of files) {
-    const code = fs.readFileSync(file, 'utf8');
-    const metadata = extractMetadata(code, file);
+const ComponentScanner = {
+  /**
+   * Scan a specific directory for components
+   */
+  scan(dirPath, source, maxDepth = 1) {
+    console.log(`Scanning ${source} components...`);
+    const files = FileSystem.findTsxFiles(dirPath, maxDepth);
+    const components = [];
     
-    if (metadata) {
-      components.push({ ...metadata, source: packageName });
-      console.log(`   ✓ [${packageName}] ${metadata.type}: ${metadata.description}`);
+    for (const file of files) {
+      const code = fs.readFileSync(file, 'utf8');
+      const metadata = Parser.extract(code, file);
+      if (metadata) {
+        components.push({ ...metadata, source });
+        console.log(`Found [${source}] ${metadata.type}: ${metadata.description}`);
+      }
     }
-  }
+    
+    return components;
+  },
   
-  return components;
-}
+  /**
+   * Scan core AgentInterface components
+   */
+  scanCore() {
+    const coreDir = path.join(__dirname, '../src/ai');
+    return this.scan(coreDir, 'agentinterface');
+  },
+  
+  /**
+   * Scan current project for components
+   */
+  scanProject() {
+    const results = [];
+    const cwd = process.cwd();
+    const projectName = FileSystem.getProjectName(cwd);
+    
+    // Common locations for components
+    const paths = ['src/components/ai', 'components/ai', 'web/src/components/ai', 'app/components/ai'];
+    
+    for (const relativePath of paths) {
+      const fullPath = path.join(cwd, relativePath);
+      if (fs.existsSync(fullPath)) {
+        console.log(`Found components at: ${relativePath}`);
+        results.push(...this.scan(fullPath, projectName, 2));
+      }
+    }
+    return results;
+  },
+  
+  /**
+   * Scan node_modules for ecosystem components
+   */
+  scanEcosystem() {
+    const results = [];
+    const nodeModules = path.join(process.cwd(), 'node_modules');
+    if (!fs.existsSync(nodeModules)) return results;
+    
+    try {
+      // Check top packages only (reasonable limit)
+      const packages = fs.readdirSync(nodeModules, { withFileTypes: true })
+        .filter(d => d.isDirectory() && !d.name.startsWith('.'))
+        .slice(0, 20);
+        
+      for (const pkg of packages) {
+        const stdPath = path.join(nodeModules, pkg.name, 'src/components/ai');
+        const altPath = path.join(nodeModules, pkg.name, 'src/ai'); // agentinterface pattern
+        
+        if (fs.existsSync(stdPath)) {
+          results.push(...this.scan(stdPath, pkg.name, 2));
+        } else if (fs.existsSync(altPath)) {
+          results.push(...this.scan(altPath, pkg.name, 1));
+        }
+      }
+    } catch (error) { /* Skip if inaccessible */ }
+    
+    return results;
+  }
+};
+
+
 
 /**
- * Generate ai.json registry
+ * Generator - Creates output files from component data
  */
-function generateRegistry(allComponents) {
-  const registry = {
-    generated_at: new Date().toISOString(),
-    version: "1.0.0",
-    total_components: allComponents.length,
-    components: {},
-    sources: {}
-  };
-  
-  // Group components by source for analytics
-  const sourceGroups = {};
-  
-  for (const comp of allComponents) {
-    // Add to components registry (last wins for duplicates)
-    registry.components[comp.type] = {
-      description: comp.description,
-      schema: comp.schema,
-      category: comp.category,
-      file: comp.file,
-      source: comp.source
+const Generator = {
+  /**
+   * Create ai.json registry
+   */
+  createRegistry(components) {
+    const registry = {
+      generated_at: new Date().toISOString(),
+      version: "1.0.0",
+      total_components: components.length,
+      components: {},
+      sources: {}
     };
     
-    // Track sources
-    if (!sourceGroups[comp.source]) {
-      sourceGroups[comp.source] = [];
+    // Group by source
+    const sourceGroups = {};
+    for (const comp of components) {
+      // Add to registry
+      registry.components[comp.type] = {
+        description: comp.description,
+        schema: comp.schema,
+        category: comp.category,
+        file: comp.file,
+        source: comp.source
+      };
+      
+      // Track sources
+      if (!sourceGroups[comp.source]) sourceGroups[comp.source] = [];
+      sourceGroups[comp.source].push(comp.type);
     }
-    sourceGroups[comp.source].push(comp.type);
-  }
+    
+    registry.sources = sourceGroups;
+    return registry;
+  },
   
-  registry.sources = sourceGroups;
-  
-  return registry;
+  /**
+   * Create ai.tsx wrapper with component imports
+   */
+  createWrapper(components) {
+    const imports = [];
+    const componentEntries = [];
+    
+    // Convert kebab-case to PascalCase
+    const toPascalCase = (str) => {
+      return str
+        .split(/[-_]/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join('');
+    };
+    
+    for (const comp of components) {
+      const componentName = toPascalCase(comp.type);
+      let importPath = comp.file.replace(/\.tsx?$/, '');
+      
+      // Handle import paths
+      if (importPath.startsWith('node_modules/agentinterface/src/')) {
+        importPath = importPath.replace('node_modules/', '');
+      } else if (importPath.startsWith('src/')) {
+        importPath = './' + importPath.substring(4);
+      }
+      
+      imports.push(`import { ${componentName} } from '${importPath}';`);
+      componentEntries.push(`  '${comp.type}': ${componentName},`);
+    }
+    
+    return `/**
+ * Auto-generated AI interface - DO NOT EDIT
+ * Generated by discover.mjs at ${new Date().toISOString()}
+ */
+
+import React from 'react';
+import { renderWithComponents } from './src/renderer';
+${imports.join('\n')}
+
+const COMPONENTS = {
+${componentEntries.join('\n')}
+} as const;
+
+export function render(agentJSON: string): React.ReactNode {
+  return renderWithComponents(agentJSON, COMPONENTS);
 }
 
+export default { render };
+`;
+  }
+};
+
+// Removed - we use generateAIWrapper instead
+
+// LLM instructions now generated dynamically by protocol() function - removed
+
+
 /**
- * Main autodiscovery process
+ * Main discovery process
  */
 function main() {
-  console.log('🚀 UNIVERSAL AIP COMPONENT AUTODISCOVERY');
-  console.log('='.repeat(50));
+  console.log('AUTODISCOVERY: Finding AI components');
   
   const cwd = process.cwd();
-  const isAgentInterface = isAgentInterfaceProject(cwd);
-  
   let allComponents = [];
   
-  if (isAgentInterface) {
-    // Running from AgentInterface - only scan core components
-    console.log('📍 Detected AgentInterface project');
-    const coreComponents = scanCoreComponents();
-    allComponents = [...coreComponents];
+  if (FileSystem.isAgentInterfaceProject(cwd)) {
+    // Running from AgentInterface itself - only scan core components
+    console.log('Detected AgentInterface project');
+    allComponents = ComponentScanner.scanCore();
   } else {
-    // Running from consuming project - scan ecosystem + current project
-    console.log(`📍 Detected project: ${getProjectName(cwd)}`);
+    // Running from a consuming project
+    console.log(`Detected project: ${FileSystem.getProjectName(cwd)}`);
     
     // Try to find AgentInterface components in node_modules
     const agentInterfacePath = path.join(cwd, 'node_modules/agentinterface/src/ai');
-    let coreComponents = [];
+    const coreComponents = fs.existsSync(agentInterfacePath) ? 
+      ComponentScanner.scan(agentInterfacePath, 'agentinterface') : [];
     
-    if (fs.existsSync(agentInterfacePath)) {
-      console.log('🔍 Scanning AgentInterface base components...');
-      const files = findTsxFiles(agentInterfacePath, 1);
-      coreComponents = scanFiles(files, 'agentinterface');
-    }
-    
-    // Scan current project components
-    const projectComponents = scanCurrentProjectComponents();
-    
-    // Scan other ecosystem packages
-    const ecosystemComponents = scanEcosystemComponents();
-    
-    allComponents = [...coreComponents, ...projectComponents, ...ecosystemComponents];
+    // Add project and ecosystem components
+    allComponents = [
+      ...coreComponents,
+      ...ComponentScanner.scanProject(),
+      ...ComponentScanner.scanEcosystem()
+    ];
   }
   
   if (allComponents.length === 0) {
-    console.log('❌ No components found with metadata exports!');
-    console.log('💡 Ensure components export metadata = { type, description, schema, category }');
+    console.log('No components found with metadata exports!');
+    console.log('Ensure components export metadata = { type, description, schema, category }');
     process.exit(1);
   }
   
-  // Generate registry
-  const registry = generateRegistry(allComponents);
+  // Generate ai.json registry and ai.tsx wrapper
+  const registry = Generator.createRegistry(allComponents);
+  const aiWrapper = Generator.createWrapper(allComponents);
   
-  // Write registry to ai.json
-  const outputPath = path.join(cwd, 'ai.json');
-  fs.writeFileSync(outputPath, JSON.stringify(registry, null, 2));
+  // Write output files
+  const registryPath = path.join(cwd, 'ai.json');
+  const wrapperPath = path.join(cwd, 'ai.tsx');
+  fs.writeFileSync(registryPath, JSON.stringify(registry, null, 2));
+  fs.writeFileSync(wrapperPath, aiWrapper);
   
-  console.log('\n✅ AUTODISCOVERY COMPLETE');
-  console.log(`📊 Total components: ${allComponents.length}`);
-  console.log(`🎯 Sources: ${Object.keys(registry.sources).join(', ')}`);
-  console.log(`📁 Registry: ${outputPath}`);
+  // Show summary
+  const types = allComponents.map(c => c.type).sort();
+  const sources = [...new Set(allComponents.map(c => c.source))]; // Unique sources
   
-  // Show component types
-  const types = Object.keys(registry.components).sort();
-  console.log(`🔧 Component types: ${types.join(', ')}`);
-  
-  // Show source breakdown
-  console.log('\n📈 Component breakdown:');
-  for (const [source, components] of Object.entries(registry.sources)) {
-    console.log(`   ${source}: ${components.length} components`);
-  }
-  
-  console.log('\n🎯 Ready for ai.protocol() and rendering!');
+  console.log('\nAUTODISCOVERY COMPLETE');
+  console.log(`Found ${allComponents.length} components from ${sources.length} sources`);
+  console.log(`Component types: ${types.join(', ')}`);
+  console.log('Ready for use with protocol() and render()');
 }
 
 // Run if called directly
@@ -348,10 +375,5 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
 
-export { 
-  extractMetadata,
-  scanCoreComponents, 
-  scanEcosystemComponents,
-  generateRegistry,
-  main
-};
+// Export public API
+export { Parser, FileSystem, ComponentScanner, Generator, main };

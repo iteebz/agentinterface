@@ -46,28 +46,14 @@ async def _generate_component(response: str, context: Dict[str, Any], llm) -> Op
     available_components = context.get("components")
     instructions = protocol(available_components)
 
-    prompt = f"""Transform this agent response into UI components.
+    prompt = f"""Transform to component JSON array:
 
-=== AGENT RESPONSE ===
 {response}
 
-=== CONTEXT ===
-Query: {query}
-Domain: {domain}
+Components: {', '.join(available_components or [])}
 
-=== AVAILABLE COMPONENTS ===
-{instructions}
-
-COMPOSITION: Components can contain other components. Layout components (card, accordion, tabs) naturally organize content components (markdown, skills, table).
-
-ALWAYS return JSON array. Examples:
-
-Single: [{{"type": "markdown", "data": {{"content": "# Analysis\\nKey findings..."}}}}]
-Multiple: [{{"type": "markdown", "data": {{"content": "# Results"}}}}, {{"type": "table", "data": {{"headers": ["Metric", "Value"], "rows": [["Speed", "95%"]]}}}}]
-Arrays: [{{"type": "markdown", "data": {{"content": "Overview:"}}}}, [{{"type": "card", "data": {{"title": "A"}}}}, {{"type": "card", "data": {{"title": "B"}}}}]]
-Nesting: [{{"type": "card", "data": {{"title": "Rich Content", "content": {{"type": "markdown", "data": {{"content": "## Nested\\n- List item"}}}}}}}}]
-
-Return JSON array. Never return "SKIP"."""
+Arrays = vertical stack. Nested arrays = horizontal rows.
+Return JSON like: [{{"type": "prose", "data": {{"content": "text"}}}}, [{{"type": "card", "data": {{"title": "A"}}}}, {{"type": "card", "data": {{"title": "B"}}}}]]"""
 
     try:
         result = await llm.generate(prompt)

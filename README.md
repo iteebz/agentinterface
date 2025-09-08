@@ -2,7 +2,7 @@
 
 Agents choose components. Universal agent wrapper.
 
-**Architecture:** Agent → Shaper LLM → Component JSON → React UI
+**Core flow:** Agent → Shaper LLM → Component JSON → React UI
 
 ```bash
 npm install agentinterface
@@ -27,7 +27,7 @@ text, components = await enhanced("Show Q3 sales")
 # Returns components: [{"type": "table", "data": {...}}]
 ```
 
-Shaper LLM analyzes response and selects optimal components:
+Shaper LLM selects components based on content analysis:
 
 ```python
 # Works with any agent: OpenAI, Anthropic, custom
@@ -38,11 +38,11 @@ result = await enhanced("Show Q3 sales data")
 
 ## Key Differentiators
 
-**vs Claude Artifacts:**
-- Works with any agent (OpenAI, Anthropic, custom)
-- Bidirectional: Components → callbacks → agent continuation  
-- Multi-component composition per response
-- Streaming with component injection
+**vs Direct artifacts:**
+- Universal: Works with any agent
+- Bidirectional: Components include callbacks
+- Compositional: Multiple components per response
+- Dynamic: Stream with component injection
 
 **vs Manual Parsing:**
 - Automatic component selection via LLM reasoning
@@ -50,9 +50,9 @@ result = await enhanced("Show Q3 sales data")
 
 ## Architecture
 
-1. **Agent responds** - Domain-specific text output
-2. **Shaper LLM** - Analyzes response, selects optimal UI components
-3. **Components render** - JSON → interactive React interface
+1. **Agent responds** - Text output
+2. **Shaper LLM** - Component selection
+3. **Components render** - JSON → React interface
 
 ```python
 from agentinterface import ai
@@ -80,12 +80,13 @@ Scans your codebase, extracts metadata, generates LLM-readable schemas.
 ## Bidirectional Interaction
 
 ```python
-# Component callbacks continue conversation
+# Callback pattern
 async for event in enhanced("Show sales data"):
     if event["type"] == "component":
-        # User interacts with component → callback → agent continuation
-        user_action = await event["callback_future"] 
-        continuation = enhanced(f"User selected: {user_action}")
+        # Component → callback → continuation
+        callback = event["data"]["callback_url"]
+        user_event = await event["callback"]() 
+        continuation = enhanced(f"User selected: {user_event["data"]}")
 ```
 
 ## Multi-Component Composition
@@ -120,13 +121,13 @@ export function Portfolio({ projects }) {
 npx agentinterface discover  # Auto-integrates
 ```
 
-## Design Principle
+## Design Principles
 
-**Agent**: Domain reasoning ("Show Q3 sales data")  
-**Shaper LLM**: Component selection (table + insights)  
+**Agent**: Domain logic  
+**Shaper**: Component selection  
 **Renderer**: UI composition
 
-Separation of concerns: domain logic, presentation intelligence, visual rendering.
+Separation of concerns.
 
 ## License
 
