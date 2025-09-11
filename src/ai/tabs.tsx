@@ -1,7 +1,5 @@
-/**
- * Tabbed interface component.
- */
 import React, { useState } from 'react';
+import type { CallbackEvent } from '../types';
 
 export interface TabItem {
   id: string;
@@ -13,42 +11,45 @@ export interface TabsProps {
   items?: TabItem[];
   defaultTab?: string;
   className?: string;
+  onCallback?: (event: CallbackEvent) => void;
 }
 
-function TabsComponent({ items = [], defaultTab, className = '' }: TabsProps) {
+function TabsComponent({ items = [], defaultTab, className = '', onCallback }: TabsProps) {
   const [activeTab, setActiveTab] = useState(defaultTab || items[0]?.id || '');
+  
+  const handleTabChange = (tabId: string, label: string) => {
+    setActiveTab(tabId);
+    onCallback?.({
+      type: 'change',
+      component: 'tabs',
+      data: { id: tabId, label }
+    });
+  };
 
   const activeContent =
     items.find((item) => item.id === activeTab)?.content || '';
 
-  // Handle empty items array
-  if (items.length === 0) {
-    return (
-      <div className={`aip-tabs ${className}`}>
-        <div className="aip-text-secondary aip-p-md">No tabs provided</div>
-      </div>
-    );
-  }
+  if (items.length === 0) return null;
 
   return (
-    <div className={`aip-tabs ${className}`}>
-      <div className="aip-tabs-nav aip-border-primary border-b">
+    <div className={className}>
+      <div className="flex border-b border-gray-200 dark:border-gray-700">
         {items.map((item) => (
           <button
             key={item.id}
-            className={`aip-tab-button aip-p-sm aip-px-md ${
+            className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === item.id
-                ? 'aip-tab-active aip-border-accent aip-text-accent border-b-2'
-                : 'aip-text-secondary hover:aip-text-primary'
+                ? 'text-gray-900 dark:text-gray-100 border-b-2 border-gray-900 dark:border-gray-100'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
             }`}
-            onClick={() => setActiveTab(item.id)}
+            onClick={() => handleTabChange(item.id, item.label)}
           >
             {item.label}
           </button>
         ))}
       </div>
-      <div className="aip-tabs-content aip-p-md">
-        <div>{activeContent}</div>
+      <div className="p-4">
+        <div className="text-gray-900 dark:text-gray-100">{activeContent}</div>
       </div>
     </div>
   );
@@ -56,8 +57,8 @@ function TabsComponent({ items = [], defaultTab, className = '' }: TabsProps) {
 
 export const Tabs = TabsComponent;
 
-// AIP Metadata - autodiscovery pattern
-export const metadata = {
+// AgentInterface Metadata - autodiscovery pattern
+export const TabsMetadata = {
   type: 'tabs',
   description: 'Tabbed content organization',
   schema: {

@@ -53,7 +53,7 @@ try {
       console.log(`   📊 Found ${registry.total_components} components`);
       
       // Check for core components
-      const coreComponents = ['card', 'markdown', 'table', 'accordion'];
+      const coreComponents = ['card', 'prose', 'table', 'accordion'];
       const missingComponents = coreComponents.filter(comp => !registry.components[comp]);
       
       if (missingComponents.length === 0) {

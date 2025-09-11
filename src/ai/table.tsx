@@ -1,6 +1,3 @@
-/**
- * Data table with sorting and filtering.
- */
 import React from 'react';
 
 export interface TableItem {
@@ -25,13 +22,13 @@ function TableComponent({ items, attributes, title, className }: TableProps) {
   return (
     <div className={className}>
       {title && <h2 className="mb-4 text-xl font-bold">{title}</h2>}
-      <div className="overflow-x-auto rounded border">
-        <table className="w-full">
+      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+        <table className="w-full bg-white dark:bg-gray-800">
           <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="px-4 py-3 text-left font-medium">Name</th>
+            <tr className="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+              <th className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100">Name</th>
               {attributes.map((attr) => (
-                <th key={attr.key} className="px-4 py-3 text-left font-medium">
+                <th key={attr.key} className="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-100">
                   {attr.label}
                 </th>
               ))}
@@ -39,10 +36,10 @@ function TableComponent({ items, attributes, title, className }: TableProps) {
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50 border-b">
-                <td className="px-4 py-3 font-medium">{item.name}</td>
+              <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-600 transition-colors">
+                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{item.name}</td>
                 {attributes.map((attr) => (
-                  <td key={attr.key} className="px-4 py-3 text-gray-600">
+                  <td key={attr.key} className="px-4 py-3 text-gray-600 dark:text-gray-300">
                     {String(item.attributes[attr.key] || '—')}
                   </td>
                 ))}
@@ -57,8 +54,8 @@ function TableComponent({ items, attributes, title, className }: TableProps) {
 
 export const Table = TableComponent;
 
-// AIP Metadata - autodiscovery pattern
-export const metadata = {
+// AgentInterface Metadata - autodiscovery pattern
+export const TableMetadata = {
   type: 'table',
   description: 'Structured data display with rows and columns',
   schema: {

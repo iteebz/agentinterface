@@ -2,6 +2,7 @@
  * Interactive suggestion buttons.
  */
 import React from 'react';
+import type { CallbackEvent } from '../types';
 
 export interface Suggestion {
   text: string;
@@ -14,19 +15,21 @@ export interface SuggestionsProps {
   suggestions: Suggestion[];
   title?: string;
   className?: string;
-  onSendMessage?: (message: string) => void;
+  onCallback?: (event: CallbackEvent) => void;
 }
 
 function SuggestionsComponent({
   suggestions,
   title = 'Continue the conversation',
   className,
-  onSendMessage,
+  onCallback,
 }: SuggestionsProps) {
   const handleSuggestionClick = (suggestion: Suggestion) => {
-    if (onSendMessage) {
-      onSendMessage(suggestion.text);
-    }
+    onCallback?.({
+      type: 'select',
+      component: 'suggestions',
+      data: { text: suggestion.text, id: suggestion.id, priority: suggestion.priority }
+    });
   };
 
   return (
@@ -39,11 +42,11 @@ function SuggestionsComponent({
           <button
             key={suggestion.id || i}
             onClick={() => handleSuggestionClick(suggestion)}
-            className="bg-gray-100 hover:bg-gray-200 border rounded-full px-3 py-1.5 text-sm transition-colors"
+            className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-full px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 transition-colors"
           >
             {suggestion.text}
             {suggestion.priority === 'high' && (
-              <span className="bg-blue-500 ml-1.5 w-1.5 h-1.5 rounded-full inline-block" />
+              <span className="bg-gray-900 dark:bg-gray-100 ml-1.5 w-1.5 h-1.5 rounded-full inline-block" />
             )}
           </button>
         ))}
@@ -54,8 +57,8 @@ function SuggestionsComponent({
 
 export const Suggestions = SuggestionsComponent;
 
-// AIP Metadata - autodiscovery pattern
-export const metadata = {
+// AgentInterface Metadata - autodiscovery pattern
+export const SuggestionsMetadata = {
   type: 'suggestions',
   description: 'Interactive follow-up prompts for conversation',
   schema: {

@@ -7,14 +7,17 @@
 export { render } from './renderer';
 
 // All AI components
-export { Card } from './ai/card';
-export { Timeline } from './ai/timeline';
-export { Markdown } from './ai/markdown';
 export { Accordion } from './ai/accordion';
-export { Code } from './ai/code';
-export { Gallery } from './ai/gallery';
-export { Reference } from './ai/reference';
+export { Card } from './ai/card';
+export { Embed } from './ai/embed';
+export { Image } from './ai/image';
+export { Markdown } from './ai/markdown';
+export { Citation } from './ai/citation';
 export { Suggestions } from './ai/suggestions';
 export { Table } from './ai/table';
 export { Tabs } from './ai/tabs';
-export { Tree } from './ai/tree';
+export { Timeline } from './ai/timeline';
+
+// Types and utilities
+export type { CallbackEvent, ComponentData, ComponentArray, ComponentMetadata } from './types';
+export { formatLLM } from './types';
