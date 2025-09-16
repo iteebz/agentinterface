@@ -29,6 +29,7 @@ class _HttpCallbackServer:
         self.port = port
         self.callbacks: Dict[str, asyncio.Future] = {}
         self._started = False
+        self._cleanup_task = None
 
     def start(self):
         """Start HTTP server if not already running."""
@@ -59,20 +60,55 @@ class _HttpCallbackServer:
 
         Thread(target=run_server, daemon=True).start()
         self._started = True
+
+        # Start cleanup task for abandoned callbacks
+        try:
+            if self._cleanup_task is None:
+                self._cleanup_task = asyncio.create_task(self._cleanup_abandoned_callbacks())
+        except RuntimeError:
+            # No event loop running, skip cleanup task
+            pass
+
         logger.debug(f"Started HTTP callback server on port {self.port}")
+
+    async def _cleanup_abandoned_callbacks(self):
+        """Clean up callbacks that have been waiting too long."""
+        while True:
+            try:
+                await asyncio.sleep(60)  # Check every minute
+                current_time = asyncio.get_event_loop().time()
+                abandoned = []
+
+                for callback_id, future in self.callbacks.items():
+                    if (
+                        not future.done()
+                        and hasattr(future, "_created_at")
+                        and current_time - future._created_at > 600
+                    ):
+                        abandoned.append(callback_id)
+
+                for callback_id in abandoned:
+                    future = self.callbacks.pop(callback_id, None)
+                    if future and not future.done():
+                        future.cancel()
+                        logger.debug(f"Cleaned up abandoned callback: {callback_id}")
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Callback cleanup error: {e}")
+
+
+_servers: Dict[int, _HttpCallbackServer] = {}
 
 
 def _get_shared_server(port: int = 8228):
     """Get or create HTTP callback server."""
-    if not hasattr(_get_shared_server, "instances"):
-        _get_shared_server.instances = {}
-
-    if port not in _get_shared_server.instances:
+    if port not in _servers:
         server = _HttpCallbackServer(port)
         server.start()
-        _get_shared_server.instances[port] = server
-
-    return _get_shared_server.instances[port]
+        _servers[port] = server
+    return _servers[port]
 
 
 class Http(Callback):
@@ -82,6 +118,7 @@ class Http(Callback):
         """Create HTTP callback with self-managed lifecycle."""
         self.id = id or str(uuid.uuid4())
         self._future = asyncio.Future()
+        self._future._created_at = asyncio.get_event_loop().time()  # Track creation time
         self._server = _get_shared_server(port)
         self._server.callbacks[self.id] = self._future
 

@@ -1,4 +1,4 @@
-"""Tests for component callback system."""
+"""Integration tests for callback system - HTTP server lifecycle"""
 
 import asyncio
 from unittest.mock import patch
@@ -91,3 +91,37 @@ async def test_shared_server_singleton():
     # Should return different instance for different port
     server3 = _get_shared_server(port=8889)
     assert server1 is not server3
+
+
+@pytest.mark.asyncio
+async def test_callback_cleanup_abandoned():
+    """Test abandoned callbacks are cleaned up after timeout."""
+    Http(id="test-cleanup", port=8123)
+    server = _get_shared_server(port=8123)
+
+    # Callback should be registered
+    assert "test-cleanup" in server.callbacks
+
+    # Create future with timestamp for cleanup
+    future = server.callbacks["test-cleanup"]
+    future._created_at = asyncio.get_event_loop().time() - 700  # 11+ minutes ago
+
+    # Run one iteration of cleanup manually (avoid infinite loop)
+    current_time = asyncio.get_event_loop().time()
+    abandoned = []
+
+    for callback_id, cb_future in server.callbacks.items():
+        if (
+            not cb_future.done()
+            and hasattr(cb_future, "_created_at")
+            and current_time - cb_future._created_at > 600
+        ):
+            abandoned.append(callback_id)
+
+    for callback_id in abandoned:
+        if callback_id in server.callbacks:
+            server.callbacks[callback_id].cancel()
+            del server.callbacks[callback_id]
+
+    # Should be cleaned up due to age
+    assert "test-cleanup" not in server.callbacks

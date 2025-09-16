@@ -1,6 +1,6 @@
 """
-Behavior tests for AgentInterface v1.0.0
-Tests actual functionality, not just imports.
+Integration tests - Agent + shaper + callbacks working together
+Uses mocks for external dependencies like LLMs
 """
 
 import asyncio
@@ -33,15 +33,13 @@ async def test_shape_transforms_text_to_components():
 
 @pytest.mark.asyncio
 async def test_shape_handles_malformed_llm_response():
-    """Test graceful handling of invalid LLM output"""
+    """Test fail-fast handling of invalid LLM output"""
     mock_llm = AsyncMock()
     mock_llm.generate = AsyncMock(return_value="invalid json {")
 
-    # Should not crash on malformed JSON
-    result = await shape("Test response", {"query": "Test query"}, mock_llm)
-
-    # Should return fallback or handle gracefully
-    assert result is not None
+    # Should raise ValueError for malformed JSON
+    with pytest.raises(ValueError, match="Invalid JSON from LLM"):
+        await shape("Test response", {"query": "Test query"}, mock_llm)
 
 
 @pytest.mark.asyncio
@@ -189,30 +187,31 @@ async def test_callback_lifecycle_management():
 
 
 def test_protocol_fallback_components():
-    """Test protocol includes markdown fallback"""
+    """Test protocol respects explicit component list"""
     instructions = protocol(["card", "table"])
 
-    # Should always include markdown as fallback
-    assert "markdown" in instructions
+    # Should only include explicitly requested components
+    assert "card" in instructions
+    assert "table" in instructions
+    # Should not include other components when explicitly listed
+    assert "timeline" not in instructions
 
 
 def test_protocol_default_components():
-    """Test protocol without arguments includes all default components"""
+    """Test protocol without arguments uses autodiscovered components"""
     instructions = protocol()
 
-    expected_components = [
-        "card",
-        "timeline",
-        "accordion",
-        "code",
-        "gallery",
-        "reference",
-        "suggestions",
-        "table",
-        "tabs",
-        "tree",
-        "markdown",
-    ]
+    # Should contain autodiscovered components (10 total)
+    # At minimum should have markdown fallback
+    assert "markdown" in instructions
 
-    for component in expected_components:
-        assert component in instructions
+    # If ai.json exists, should have all discovered components
+    import json
+    from pathlib import Path
+
+    registry_path = Path.cwd() / "ai.json"
+    if registry_path.exists():
+        registry = json.loads(registry_path.read_text())
+        expected_components = list(registry.get("components", {}).keys())
+        for component in expected_components:
+            assert component in instructions

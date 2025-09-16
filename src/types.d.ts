@@ -22,6 +22,18 @@ export interface CallbackEvent {
   data: Record<string, any>;
 }
 
+export interface AgentResponse {
+  id: string;
+  timestamp: number;
+  content: ComponentData | ComponentArray;
+}
+
+export interface AgentCanvasProps {
+  onCallback?: (event: CallbackEvent) => void;
+  className?: string;
+  maxResponses?: number;
+}
+
 export function formatLLM(event: CallbackEvent): string {
   const action = event.type === 'toggle' ? 'toggled' : `${event.type}ed`;
   const detail = event.data.title || event.data.text || event.data.id || event.data.label || '';

@@ -4,7 +4,7 @@ import type { CallbackEvent } from '../types';
 export interface TabItem {
   id: string;
   label: string;
-  content: string;
+  content: any;
 }
 
 export interface TabsProps {
@@ -33,23 +33,25 @@ function TabsComponent({ items = [], defaultTab, className = '', onCallback }: T
 
   return (
     <div className={className}>
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              activeTab === item.id
-                ? 'text-gray-900 dark:text-gray-100 border-b-2 border-gray-900 dark:border-gray-100'
-                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
-            }`}
-            onClick={() => handleTabChange(item.id, item.label)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-      <div className="p-4">
-        <div className="text-gray-900 dark:text-gray-100">{activeContent}</div>
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          {items.map((item) => (
+            <button
+              key={item.id}
+              className={`px-6 py-3 text-sm font-medium transition-colors rounded-t-xl ${
+                activeTab === item.id
+                  ? 'text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 border-b-2 border-blue-500'
+                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+              onClick={() => handleTabChange(item.id, item.label)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="p-6">
+          {activeContent}
+        </div>
       </div>
     </div>
   );
@@ -71,7 +73,7 @@ export const TabsMetadata = {
           properties: {
             id: { type: 'string' },
             label: { type: 'string' },
-            content: { type: 'string' }
+            content: { type: 'any' }
           },
           required: ['id', 'label', 'content']
         }

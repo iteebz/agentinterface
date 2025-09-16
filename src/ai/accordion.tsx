@@ -3,7 +3,7 @@ import type { CallbackEvent } from '../types';
 
 export interface AccordionSection {
   title: string;
-  content: string;
+  content: any;
   defaultExpanded?: boolean;
 }
 
@@ -40,15 +40,17 @@ function AccordionComponent({ sections = [], className, onCallback }: AccordionP
   return (
     <div className={className}>
       {sections.map((section, index) => (
-        <div key={index} className="border border-gray-200 dark:border-gray-700 rounded-lg mb-2 bg-white dark:bg-gray-800">
+        <div key={index} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 mb-4">
           <button 
-            className="w-full p-4 text-left font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors rounded-lg"
+            className="w-full p-6 text-left font-semibold text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors rounded-xl"
             onClick={() => toggle(index)}
           >
             {section.title}
           </button>
           {openSections.has(index) && (
-            <div className="px-4 pb-4 text-gray-600 dark:text-gray-300 border-t border-gray-200 dark:border-gray-700 pt-4">{section.content}</div>
+            <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+              {section.content}
+            </div>
           )}
         </div>
       ))}
@@ -71,7 +73,7 @@ export const AccordionMetadata = {
           type: 'object',
           properties: {
             title: { type: 'string' },
-            content: { type: 'string' },
+            content: { type: 'any' },
             defaultExpanded: { type: 'boolean', optional: true }
           },
           required: ['title', 'content']

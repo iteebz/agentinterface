@@ -4,7 +4,7 @@
  * Tests the core discovery pipeline end-to-end
  */
 
-/* eslint-disable no-console, no-undef */
+/* eslint-disable no-undef */
 
 import { execSync } from 'child_process';
 import fs from 'fs';
@@ -28,20 +28,12 @@ try {
   process.exit(1);
 }
 
-// Test 2: Registry files were generated
-console.log('2. Testing registry and wrapper generation...');
+// Test 2: Registry generation
+console.log('2. Testing registry generation...');
 const registryPath = path.join(process.cwd(), 'ai.json');
-const wrapperPath = path.join(process.cwd(), 'ai.tsx');
 
 if (fs.existsSync(registryPath)) {
   console.log('   ✅ Registry file (ai.json) exists');
-} else {
-  console.error('   ❌ Registry file (ai.json) was not generated');
-  process.exit(1);
-}
-
-if (fs.existsSync(wrapperPath)) {
-  console.log('   ✅ Wrapper file (ai.tsx) exists');
   
   // Validate registry
 try {
@@ -53,7 +45,7 @@ try {
       console.log(`   📊 Found ${registry.total_components} components`);
       
       // Check for core components
-      const coreComponents = ['card', 'prose', 'table', 'accordion'];
+      const coreComponents = ['card', 'markdown', 'table', 'accordion'];
       const missingComponents = coreComponents.filter(comp => !registry.components[comp]);
       
       if (missingComponents.length === 0) {
@@ -70,25 +62,8 @@ try {
     console.error('   ❌ Registry JSON is invalid:', error.message);
     process.exit(1);
   }
-  
-  // Validate wrapper
-  try {
-    const wrapper = fs.readFileSync(wrapperPath, 'utf8');
-    
-    // Check for essential wrapper components
-    if (wrapper.includes('export function render(') && 
-        wrapper.includes('const COMPONENTS =')) {
-      console.log('   ✅ Wrapper has correct structure');
-    } else {
-      console.error('   ❌ Wrapper structure is invalid');
-      process.exit(1);
-    }
-  } catch (error) {
-    console.error('   ❌ Wrapper file cannot be read:', error.message);
-    process.exit(1);
-  }
 } else {
-  console.error('   ❌ Wrapper file (ai.tsx) was not generated');
+  console.error('   ❌ Registry file (ai.json) was not generated');
   process.exit(1);
 }
 
