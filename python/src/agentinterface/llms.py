@@ -4,8 +4,24 @@ import os
 import time
 from typing import Any, Callable, Optional, Protocol, Union, runtime_checkable
 
-from .constants import DEFAULT_MODELS, DEFAULT_PROVIDER
 from .logger import logger
+
+# Load environment variables at import time
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(override=True)
+except ImportError:
+    from pathlib import Path
+
+    env_file = Path(".env")
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if line and "=" in line and not line.startswith("#"):
+                    key, value = line.split("=", 1)
+                    os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
 
 _rotators = {}
 
@@ -39,10 +55,6 @@ class Rotator:
                 key = os.getenv(f"{alias}_{i}")
                 if key and key not in keys:
                     keys.append(key)
-
-        base = detect_api_key(self.service.lower())
-        if base and base not in keys:
-            keys.append(base)
 
         return keys
 
@@ -96,28 +108,8 @@ async def with_rotation(service: str, fn: Callable, *args, **kwargs) -> Any:
     raise err
 
 
-def load_env():
-    """Load .env file using python-dotenv if available, fallback to manual parsing."""
-    try:
-        from dotenv import load_dotenv
-
-        load_dotenv()
-    except ImportError:
-        from pathlib import Path
-
-        env_file = Path(".env")
-        if env_file.exists():
-            with open(env_file) as f:
-                for line in f:
-                    line = line.strip()
-                    if line and "=" in line and not line.startswith("#"):
-                        key, value = line.split("=", 1)
-                        os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
-
-
 def detect_api_key(service: str) -> Optional[str]:
-    """Cogency-compatible API key detection with rotation support."""
-    load_env()
+    """API key detection with rotation support."""
 
     patterns = [
         f"{service.upper()}_API_KEY",
@@ -154,7 +146,7 @@ class LLM(Protocol):
         ...
 
 
-def llm(provider: Union[str, LLM] = DEFAULT_PROVIDER) -> LLM:
+def llm(provider: Union[str, LLM] = "openai") -> LLM:
     """Create or pass through LLM provider.
 
     Args:
@@ -168,13 +160,15 @@ def llm(provider: Union[str, LLM] = DEFAULT_PROVIDER) -> LLM:
         model = llm("gemini")
         model = llm("anthropic")
 
-        class CustomLLM:
+        class CustomLLM(LLM):
             async def generate(self, prompt: str) -> str:
                 return "Custom response"
 
         model = llm(CustomLLM())
     """
-    if hasattr(provider, "generate"):
+
+    # If already an LLM instance, pass through
+    if isinstance(provider, LLM):
         return provider
 
     if provider == "openai":
@@ -187,14 +181,11 @@ def llm(provider: Union[str, LLM] = DEFAULT_PROVIDER) -> LLM:
         raise ValueError(f"Unknown LLM provider: {provider}")
 
 
-class OpenAI:
+class OpenAI(LLM):
     """OpenAI LLM provider."""
 
     def __init__(self, model: Optional[str] = None):
-        self.model = model or DEFAULT_MODELS["openai"]
-        self.api_key = detect_api_key("openai")
-        if not self.api_key:
-            raise RuntimeError("OPENAI_API_KEY not found")
+        self.model = model or "gpt-4o-mini"
 
     async def generate(self, prompt: str) -> str:
         try:
@@ -215,14 +206,11 @@ class OpenAI:
         return await with_rotation("openai", _gen)
 
 
-class Gemini:
+class Gemini(LLM):
     """Gemini LLM provider."""
 
     def __init__(self, model: Optional[str] = None):
-        self.model = model or DEFAULT_MODELS["gemini"]
-        self.api_key = detect_api_key("gemini")
-        if not self.api_key:
-            raise RuntimeError("GEMINI_API_KEY not found")
+        self.model = model or "gemini-2.5-flash-lite"
 
     async def generate(self, prompt: str) -> str:
         try:
@@ -238,14 +226,11 @@ class Gemini:
         return await with_rotation("gemini", _gen)
 
 
-class Anthropic:
+class Anthropic(LLM):
     """Anthropic LLM provider."""
 
     def __init__(self, model: Optional[str] = None):
-        self.model = model or DEFAULT_MODELS["anthropic"]
-        self.api_key = detect_api_key("anthropic")
-        if not self.api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY not found")
+        self.model = model or "claude-3-5-haiku-20241022"
 
     async def generate(self, prompt: str) -> str:
         try:

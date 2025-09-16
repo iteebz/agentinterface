@@ -42,6 +42,7 @@ function SuggestionsComponent({
           <button
             key={suggestion.id || i}
             onClick={() => handleSuggestionClick(suggestion)}
+            type="button"
             className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-full px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 transition-colors"
           >
             {suggestion.text}

@@ -3,90 +3,81 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
-from .callback import Http
-from .constants import TIMEOUT
+from .callback import Callback, Http
+from .llms import LLM
 from .logger import logger
 
 
-
 def protocol(components: Optional[List[str]] = None) -> str:
-    """Generate rich LLM instructions from ai.json registry"""
-    # Load component registry from ai.json
-    registry_path = Path.cwd() / "ai.json"
-    if not registry_path.exists():
-        raise RuntimeError("ai.json not found. Run 'npx agentinterface discover' to generate component registry.")
-    
-    try:
-        registry = json.loads(registry_path.read_text())
-        registry_components = registry.get("components", {})
-    except Exception as e:
-        raise RuntimeError(f"Failed to load ai.json: {e}")
-    
-    if not registry_components:
-        raise RuntimeError("No components found in ai.json. Run 'npx agentinterface discover' to generate registry.")
-
-    # Filter components if requested
+    """Generate LLM component instructions"""
     if components:
-        available_components = {k: v for k, v in registry_components.items() if k in components}
+        component_specs = [f"{comp}: Available component" for comp in components]
     else:
-        available_components = registry_components
+        registry_path = Path.cwd() / "ai.json"
+        component_specs = []
 
-    # Generate rich instructions
-    instructions = "# Available Components\n\n"
-    instructions += f"Available components: {', '.join(sorted(available_components.keys()))}\n\n"
-    instructions += "## Component Usage\n"
-    instructions += 'Single: {"type": "card", "data": {"title": "Hello"}}\n'
-    instructions += (
-        "Arrays: [comp1, [comp2, comp3], comp4] = vertical stack with horizontal row\n\n"
-    )
-    instructions += "## Components\n\n"
+        if registry_path.exists():
+            try:
+                registry = json.loads(registry_path.read_text())
+                components_data = registry.get("components", {})
 
-    # Group components by category
-    by_category = {}
-    for comp_type, meta in available_components.items():
-        category = meta.get("category", "general")
-        if category not in by_category:
-            by_category[category] = []
-        by_category[category].append((comp_type, meta))
-
-    # Output components by category
-    for category, comps in by_category.items():
-        instructions += f"### {category.capitalize()} Components\n\n"
-        for comp_type, meta in comps:
-            instructions += f"**{comp_type}** - {meta['description']}\n"
-            if meta.get("schema", {}).get("properties"):
-                for prop, info in meta["schema"]["properties"].items():
-                    required = (
-                        "required" if prop in meta["schema"].get("required", []) else "optional"
+                if not components_data:
+                    logger.warning(
+                        "Empty component registry found. Run 'npx agentinterface discover' to scan for components."
                     )
-                    prop_type = info.get("type", "any")
-                    instructions += f"- {prop} ({prop_type}, {required})"
-                    if info.get("enum"):
-                        instructions += f" - options: {', '.join(info['enum'])}"
-                    instructions += "\n"
-            instructions += "\n"
+                    component_specs = ["markdown: Text content with formatting"]
+                else:
+                    for comp_type, comp_info in components_data.items():
+                        desc = comp_info.get("description", "")
+                        schema = comp_info.get("schema", {})
+                        properties = schema.get("properties", {})
 
-    instructions += "\nALWAYS return JSON array format.\n"
-    return instructions
+                        # Show key properties from schema
+                        key_props = []
+                        for prop, prop_info in list(properties.items())[:3]:  # Show first 3 props
+                            if not prop_info.get("optional", False):
+                                key_props.append(prop)
 
+                        prop_hint = f" (uses: {', '.join(key_props)})" if key_props else ""
+                        component_specs.append(f"{comp_type}: {desc}{prop_hint}")
 
-async def shape(response: str, context: dict = None, llm=None) -> str:
-    """Transform text → components"""
-    if not llm:
-        from .llms import llm as create_llm
+            except Exception as e:
+                logger.warning(
+                    f"Invalid ai.json registry: {e}. Run 'npx agentinterface discover' to regenerate."
+                )
+                component_specs = ["markdown: Text content with formatting"]
+        else:
+            logger.warning(
+                "No ai.json registry found. Run 'npx agentinterface discover' to scan for components."
+            )
+            component_specs = ["markdown: Text content with formatting"]
 
-        llm = create_llm()
-    from .shaper import shape
+    component_list = "\n".join(f"- {spec}" for spec in component_specs)
 
-    return await shape(response, context, llm)
+    # Use only available components in examples
+    available_components = components or ["card", "table", "markdown"]
+    first_comp = available_components[0] if available_components else "card"
+    second_comp = available_components[1] if len(available_components) > 1 else first_comp
+    third_comp = available_components[2] if len(available_components) > 2 else first_comp
+
+    return f"""Available components:
+{component_list}
+
+Composition patterns:
+- Single: [{{"type": "{first_comp}", "data": {{"title": "Revenue", "value": "$5M"}}}}]
+- Multiple: [{{"type": "{first_comp}", "data": {...}}}, {{"type": "{second_comp}", "data": {...}}}]
+- Horizontal: [[{{"type": "{first_comp}", "data": {...}}}, {{"type": "{first_comp}", "data": {...}}}]]
+- Mixed: [{{"type": "{first_comp}", "data": {...}}}, [comp1, comp2], {{"type": "{third_comp}", "data": {...}}}]
+
+Return JSON array format only."""
 
 
 # Callback handling moved to callback.py module
 
 
-async def _get_agent_response(agent, query: str) -> str:
+async def _get_agent_response(agent: Any, query: str) -> str:
     """Get response from agent"""
     if callable(agent):
         return await agent(query) if asyncio.iscoroutinefunction(agent) else agent(query)
@@ -98,7 +89,7 @@ async def _get_agent_response(agent, query: str) -> str:
         raise ValueError("Agent must be callable or have .run() method")
 
 
-def _extract_text(event) -> str:
+def _extract_text(event: Any) -> str:
     """Extract text from any event format with zero coupling."""
     if isinstance(event, str):
         return event
@@ -114,27 +105,35 @@ def _extract_text(event) -> str:
 
 
 def ai(
-    agent, llm, components: Optional[List[str]] = None, port: int = 8228, interactive: bool = False
-):
-    """Agent → UI components"""
+    agent: Any,
+    llm: LLM,
+    components: Optional[List[str]] = None,
+    callback: Optional[Callback] = None,
+    timeout: int = 300,
+) -> Callable:
+    """Universal agent-to-UI wrapper"""
 
-    def agent_fn(*agent_args, **agent_kwargs):
+    def enhanced(*agent_args, **agent_kwargs):
         agent_output = agent(*agent_args, **agent_kwargs)
 
         if hasattr(agent_output, "__aiter__"):
-            return _stream(agent, agent_output, llm, components, port, interactive, agent_args)
+            return _stream(agent, agent_output, llm, components, callback, agent_args, timeout)
 
         elif asyncio.iscoroutine(agent_output):
-            return _async(agent, agent_output, llm, components, port, agent_args)
+            return _async(agent, agent_output, llm, components, callback, agent_args)
 
         else:
-            return _sync(agent, agent_output, llm, components, port, agent_args)
+            return _sync(agent, agent_output, llm, components, callback, agent_args)
 
-    return agent_fn
+    return enhanced
 
 
-async def _generate_components(text: str, agent_args, components, llm):
+async def _generate_components(
+    text: str, agent_args: Tuple[Any, ...], components: Optional[List[str]], llm: LLM
+) -> List[Dict[str, Any]]:
     """Core component generation logic"""
+    from .shaper import shape
+
     try:
         query_context = str(agent_args[0]) if agent_args else "User request"
         shaped = await shape(text, {"query": query_context, "components": components}, llm)
@@ -142,10 +141,18 @@ async def _generate_components(text: str, agent_args, components, llm):
         return component_array
     except Exception as e:
         logger.warning(f"Component generation failed, falling back to prose: {e}")
-        return [{"type": "prose", "data": {"content": text}}]
+        return [{"type": "markdown", "data": {"content": text}}]
 
 
-async def _stream(agent, stream, llm, components, port, interactive, agent_args):
+async def _stream(
+    agent: Any,
+    stream: Any,
+    llm: LLM,
+    components: Optional[List[str]],
+    callback: Optional[Callback],
+    agent_args: Tuple[Any, ...],
+    timeout: int = 300,
+):
     """Streaming: Passthrough + Collect + Tack-on"""
     collected_text = ""
 
@@ -160,9 +167,7 @@ async def _stream(agent, stream, llm, components, port, interactive, agent_args)
             collected_text.strip(), agent_args, components, llm
         )
 
-        if interactive:
-            # Create self-managing callback
-            callback = Http(port=port)
+        if callback:
             component_data = {
                 "components": component_array,
                 "callback_url": callback.endpoint(),
@@ -172,10 +177,10 @@ async def _stream(agent, stream, llm, components, port, interactive, agent_args)
 
             try:
                 # Await user interaction - cleans up automatically
-                user_event = await callback.await_interaction(timeout=TIMEOUT)
+                user_event = await callback.await_interaction(timeout=timeout)
                 query_context = str(agent_args[0]) if agent_args else "User request"
                 continuation_query = f"{query_context}\n\nUser selected: {user_event['data']}"
-                continuation_agent = ai(agent, llm, components, port, interactive)
+                continuation_agent = ai(agent, llm, components, Http())
                 async for event in continuation_agent(continuation_query, *agent_args[1:]):
                     yield event
             except asyncio.TimeoutError:
@@ -184,14 +189,28 @@ async def _stream(agent, stream, llm, components, port, interactive, agent_args)
             yield {"type": "component", "data": {"components": component_array}}
 
 
-async def _async(agent, coroutine, llm, components, port, agent_args):
+async def _async(
+    agent: Any,
+    coroutine: Awaitable[Any],
+    llm: LLM,
+    components: Optional[List[str]],
+    callback: Optional[Callback],
+    agent_args: Tuple[Any, ...],
+) -> Tuple[Any, List[Dict[str, Any]]]:
     """Async - always returns (text, components) tuple"""
     response = await coroutine
     component_array = await _generate_components(str(response), agent_args, components, llm)
     return (response, component_array)
 
 
-def _sync(agent, response, llm, components, port, agent_args):
+def _sync(
+    agent: Any,
+    response: Any,
+    llm: LLM,
+    components: Optional[List[str]],
+    callback: Optional[Callback],
+    agent_args: Tuple[Any, ...],
+) -> Awaitable[Tuple[Any, List[Dict[str, Any]]]]:
     """Sync - always returns coroutine that resolves to (text, components) tuple"""
 
     async def _async_shape():
@@ -201,4 +220,4 @@ def _sync(agent, response, llm, components, port, agent_args):
     return _async_shape()
 
 
-__all__ = ["ai", "protocol", "shape"]
+__all__ = ["ai", "protocol"]

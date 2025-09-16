@@ -1,9 +1,44 @@
 import React from 'react';
+import type { ComponentType } from 'react';
+import { CallbackEvent } from './types';
+import { Accordion } from './ai/accordion';
+import { Card } from './ai/card';
+import { Citation } from './ai/citation';
+import { Embed } from './ai/embed';
+import { Image } from './ai/image';
+import { Markdown } from './ai/markdown';
+import { Suggestions } from './ai/suggestions';
+import { Table } from './ai/table';
+import { Tabs } from './ai/tabs';
+import { Timeline } from './ai/timeline';
+
+// Default component registry
+const DEFAULT_COMPONENTS = {
+  accordion: Accordion,
+  card: Card,
+  citation: Citation,
+  embed: Embed,
+  image: Image,
+  markdown: Markdown,
+  suggestions: Suggestions,
+  table: Table,
+  tabs: Tabs,
+  timeline: Timeline,
+};
+
+// Core component rendering logic
 export function render(
   agentJSON: string,
-  components: Record<string, React.ComponentType<any>>,
+  components?: Record<string, React.ComponentType<any>>,
+  onCallback?: (event: CallbackEvent) => void,
   metadata?: Record<string, any>
 ): React.ReactNode {
+  
+  // Load autodiscovered components if none provided
+  const componentMap: Record<string, ComponentType<any>> = {
+    ...DEFAULT_COMPONENTS,
+    ...(components ?? {}),
+  };
   
   function processData(data: any): any {
     if (data && typeof data === 'object' && data.type) {
@@ -18,7 +53,7 @@ export function render(
   function renderItem(item: any, key: number): React.ReactNode {
     if (Array.isArray(item)) {
       return (
-        <div key={key} className="flex gap-4">
+        <div key={key} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
           {item.map((subItem, i) => renderItem(subItem, i))}
         </div>
       );
@@ -38,17 +73,17 @@ export function render(
       }
     }
     
-    const Component = components[type];
+    const Component = componentMap[type];
     if (!Component) {
       return <div key={key}>Unknown: {type}</div>;
     }
     
-    return <Component key={key} {...processedData} />;
+    // Pass callback to components
+    return <Component key={key} {...processedData} onCallback={onCallback} />;
   }
 
   const parsed = JSON.parse(agentJSON);
   return Array.isArray(parsed) 
-    ? <div className="flex flex-col gap-4">{parsed.map((item, i) => renderItem(item, i))}</div>
+    ? <div className="space-y-6">{parsed.map((item, i) => renderItem(item, i))}</div>
     : renderItem(parsed, 0);
 }
-

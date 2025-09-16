@@ -3,7 +3,11 @@
  */
 
 
-// Main renderer - converts agent JSON to React components
+// AgentCanvas - infinite scroll container for agent responses
+export { AgentCanvas } from './canvas';
+export type { AgentCanvasRef } from './canvas';
+
+// Core rendering utilities
 export { render } from './renderer';
 
 // All AI components
@@ -19,5 +23,12 @@ export { Tabs } from './ai/tabs';
 export { Timeline } from './ai/timeline';
 
 // Types and utilities
-export type { CallbackEvent, ComponentData, ComponentArray, ComponentMetadata } from './types';
+export type { 
+  CallbackEvent, 
+  ComponentData, 
+  ComponentArray, 
+  ComponentMetadata,
+  AgentResponse,
+  AgentCanvasProps 
+} from './types';
 export { formatLLM } from './types';

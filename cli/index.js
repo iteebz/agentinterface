@@ -27,17 +27,8 @@ switch (command) {
 }
 
 function showHelp() {
-  console.log(`
-🚀 AgentInterface CLI
-
-USAGE:
-  npx agentinterface <command>
-
-COMMANDS:
-  discover    Auto-discover AIP components and generate registry
-  help        Show this help message
-
-EXAMPLES:
-  npx agentinterface discover    # Scan for components, generate ai.json
-`);
+  console.log('AgentInterface CLI\n');
+  console.log('COMMANDS:');
+  console.log('  discover    Generate component registry');
+  console.log('  help        Show help');
 }

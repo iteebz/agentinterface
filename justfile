@@ -2,15 +2,15 @@ default:
     @just --list
 
 install:
-    @pnpm install
+    @npm install
     @cd python && poetry install
 
 test:
-    @pnpm test
+    @npm test
     @cd python && poetry run pytest -v
 
 lint:
-    @pnpm lint
+    @npm run lint
     @cd python && poetry run ruff check .
 
 format:

@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "AI agents choose UI components with zero ceremony.",
   "type": "module",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "agentinterface": "./cli/index.js"
   },
@@ -12,42 +12,47 @@
     "src",
     "python",
     "cli",
-    "scripts"
+    "scripts",
+    "dist"
   ],
   "scripts": {
     "discover": "node scripts/discover.mjs",
     "dev": "echo 'Import components directly'",
-    "test": "pnpm run test:autodiscovery && pnpm run test:renderer",
-    "test:autodiscovery": "node tests/autodiscovery.test.js",
-    "test:renderer": "pnpm exec ts-node tests/renderer.test.ts",
-    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit",
+    "visual": "node scripts/visual-inspect.js",
+    "typecheck": "tsc --noEmit --include 'src/**/*' --include 'tests/**/*'",
     "format": "prettier --write 'src/**/*.{ts,tsx}' 'tests/**/*.{ts,tsx}'",
-    "lint": "eslint src/ tests/"
+    "lint": "eslint src/ tests/",
+    "build": "tsc",
+    "prepare": "npm run build",
+    "test:unit": "vitest run"
   },
   "dependencies": {
-    "@babel/parser": "^7.28.4",
-    "@babel/traverse": "^7.28.4",
-    "@babel/types": "^7.28.4",
-    "@radix-ui/react-collapsible": "^1.1.11",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.525.0",
-    "react-markdown": "^10.1.0",
+    "@radix-ui/react-collapsible": "1.1.12",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "0.525.0",
+    "react-markdown": "10.1.0",
     "react-syntax-highlighter": "15.5.0",
-    "remark-gfm": "^4.0.1",
-    "tailwind-merge": "^2.6.0"
+    "remark-gfm": "4.0.1",
+    "tailwind-merge": "2.6.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.30.0",
+    "@eslint/js": "^9.35.0",
     "@types/node": "^24.3.1",
-    "@types/react": "^19.0.8",
+    "@types/react": "^19.1.12",
     "@types/react-syntax-highlighter": "^15.5.13",
-    "@typescript-eslint/eslint-plugin": "^8.41.0",
-    "@typescript-eslint/parser": "^8.41.0",
-    "eslint": "^9.30.0",
+    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/parser": "^8.43.0",
+    "eslint": "^9.35.0",
     "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.9.2",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@vitejs/plugin-react": "^5.0.3",
+    "jsdom": "^24.1.3",
+    "vitest": "^1.6.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -66,5 +71,13 @@
     "type": "git",
     "url": "https://github.com/iteebz/agentinterface"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "packageManager": "npm@10.9.0"
 }

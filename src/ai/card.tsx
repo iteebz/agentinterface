@@ -6,7 +6,7 @@ import type { CallbackEvent } from '../types';
 
 export interface CardProps {
   title?: string;
-  content?: string;
+  content?: any;
   actions?: any[];
   className?: string;
   variant?: 'default' | 'outlined' | 'elevated';
@@ -29,34 +29,38 @@ function CardComponent({
       data: { title, content }
     });
   };
-  const baseStyles = 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg';
+
+  const baseStyles = 'bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm hover:shadow-md transition-all duration-200 flex-1';
   const variantStyles = {
     default: '',
     outlined: 'border-2',
-    elevated: 'shadow-md'
+    elevated: 'shadow-lg'
   };
 
   return (
     <div 
-      className={`${baseStyles} ${variantStyles[variant]} ${onCallback ? 'cursor-pointer hover:shadow-sm transition-shadow' : ''} ${className}`}
+      className={`${baseStyles} ${variantStyles[variant]} ${onCallback ? 'cursor-pointer hover:scale-[1.02]' : ''} ${className}`}
       onClick={onCallback ? handleClick : undefined}
     >
       {title && (
-        <div className="px-4 pt-4 pb-2">
-          <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
-        </div>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-lg mb-4">
+          {title}
+        </h3>
       )}
+      
       {content && (
-        <div className="px-4 pb-4 text-gray-600 dark:text-gray-400">
+        <div className="text-gray-600 dark:text-gray-400">
           {content}
         </div>
       )}
+      
       {actions && (
-        <div className="px-4 pb-4 flex gap-2">
+        <div className="mt-4 flex gap-2">
           {actions.map((action, i) => (
             <button 
               key={i}
-              className="px-3 py-1.5 text-sm bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded transition-colors"
+              type="button"
+              className="px-3 py-1.5 text-sm bg-gray-900 hover:bg-gray-800 dark:bg-gray-100 dark:hover:bg-gray-200 text-white dark:text-gray-900 rounded-lg transition-colors"
             >
               {action}
             </button>
@@ -69,7 +73,6 @@ function CardComponent({
 
 export const Card = CardComponent;
 
-// AgentInterface Metadata - autodiscovery pattern
 export const CardMetadata = {
   type: 'card',
   description: 'Generic card with title, content and actions',
@@ -77,7 +80,7 @@ export const CardMetadata = {
     type: 'object',
     properties: {
       title: { type: 'string', optional: true },
-      content: { type: 'string', optional: true },
+      content: { type: 'any', optional: true },
       actions: { type: 'array', items: { type: 'string' }, optional: true },
       variant: { type: 'string', enum: ['default', 'outlined', 'elevated'], optional: true },
       className: { type: 'string', optional: true }
