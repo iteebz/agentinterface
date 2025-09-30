@@ -43,7 +43,7 @@ pytest = "8.4.2"
 pytest-asyncio = "0.21.2"
 pytest-cov = "6.3.0"
 fastapi = "0.116.1"
-uvicorn = "0.35.0"
+uvicorn = ">=0.37.0"
 
 [tool.poetry]
 packages = [{ include = "agentinterface", from = "src" }]
@@ -90,6 +90,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 pythonpath = ["src"]
-# Skip slow system tests in CI - run manually with: pytest tests/test_system.py
-addopts = "--ignore=tests/test_system.py"
-# Run both unit and integration tests by default
+filterwarnings = [
+    "ignore:websockets.legacy is deprecated:DeprecationWarning",
+    "ignore:websockets.server.WebSocketServerProtocol is deprecated:DeprecationWarning",
+]

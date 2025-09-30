@@ -45,7 +45,7 @@ def _validate_component_tree(components: Any, allowed: Optional[Iterable[str]] =
     if not isinstance(components, list):
         raise ValueError("LLM output must be a JSON array")
 
-    allowed_set = set(allowed or []) or None
+    allowed_set = set(allowed) if allowed else None
     registry = _registry()
 
     def _validate(node: Any, trail: str) -> None:
@@ -77,7 +77,10 @@ def _validate_component_tree(components: Any, allowed: Optional[Iterable[str]] =
         required_fields = []
         if schema_entry:
             schema = schema_entry.get("schema", {})
-            required_fields = schema.get("required", []) if isinstance(schema, dict) else []
+            if isinstance(schema, dict):
+                required_fields = schema.get("required") or []
+            else:
+                required_fields = []
 
         missing = [field for field in required_fields if field not in data]
         if missing:

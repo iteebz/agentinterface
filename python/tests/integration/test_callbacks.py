@@ -9,7 +9,6 @@ from agentinterface.callback import Callback, Http, _get_shared_server
 
 
 def test_callback_protocol():
-    """Test callback protocol typing."""
     # This is a compile-time check, but we can verify at runtime too
 
     class CustomCallback:
@@ -32,7 +31,6 @@ def test_callback_protocol():
 
 @pytest.mark.asyncio
 async def test_http_callback_endpoint():
-    """Test HTTP callback endpoint generation."""
     callback = Http(id="test-id", port=9999)
 
     # Endpoint should contain protocol, host, port and ID
@@ -48,7 +46,6 @@ async def test_http_callback_endpoint():
 
 @pytest.mark.asyncio
 async def test_http_callback_lifecycle():
-    """Test HTTP callback lazy registration on await."""
     callback = Http(id="test-lifecycle")
     server = _get_shared_server()
 
@@ -73,7 +70,6 @@ async def test_http_callback_lifecycle():
 
 @pytest.mark.asyncio
 async def test_http_callback_timeout():
-    """Test HTTP callback timeout behavior."""
     callback = Http(id="test-timeout")
 
     # Should timeout and clean up
@@ -87,7 +83,6 @@ async def test_http_callback_timeout():
 
 @pytest.mark.asyncio
 async def test_shared_server_singleton():
-    """Test shared server singleton pattern."""
     # Should return same instance for same port
     server1 = _get_shared_server(port=8888)
     server2 = _get_shared_server(port=8888)
@@ -99,8 +94,34 @@ async def test_shared_server_singleton():
 
 
 @pytest.mark.asyncio
+async def test_concurrent_callback_registration():
+    callbacks = [Http(id=f"concurrent-{i}") for i in range(5)]
+    server = _get_shared_server()
+
+    # Register all concurrently
+    tasks = [asyncio.create_task(cb.await_interaction(timeout=1)) for cb in callbacks]
+    await asyncio.sleep(0.01)
+
+    # All should be registered
+    for cb in callbacks:
+        assert cb.id in server.callbacks
+
+    # Trigger them all
+    for cb in callbacks:
+        _loop, future = server.callbacks[cb.id]
+        _loop.call_soon_threadsafe(future.set_result, {"data": cb.id})
+
+    # All should complete
+    results = await asyncio.gather(*tasks)
+    assert len(results) == 5
+
+    # All should be cleaned up
+    for cb in callbacks:
+        assert cb.id not in server.callbacks
+
+
+@pytest.mark.asyncio
 async def test_callback_cleanup_abandoned():
-    """Test abandoned callbacks are cleaned up after timeout."""
     callback = Http(id="test-cleanup", port=8123)
     server = _get_shared_server(port=8123)
 
