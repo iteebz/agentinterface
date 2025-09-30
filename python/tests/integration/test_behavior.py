@@ -109,25 +109,23 @@ async def test_ai_with_shaper_llm():
         return "Sales data: Revenue $100K, Users 500"
 
     mock_llm = AsyncMock()
-    mock_llm.generate = AsyncMock(return_value='[{"type": "table", "data": {"title": "Sales"}}]')
+    # Return valid component with required fields
+    mock_llm.generate = AsyncMock(
+        return_value='[{"type": "card", "data": {"title": "Sales", "content": "Revenue $100K"}}]'
+    )
 
-    try:
-        # Test with sync agent and LLM - returns coroutine that resolves to tuple
-        agent = ai(test_agent, llm=mock_llm)
-        result = agent("show sales")
+    # Test with sync agent and LLM - returns coroutine that resolves to tuple
+    agent = ai(test_agent, llm=mock_llm)
+    result = agent("show sales")
 
-        # Sync agent with LLM returns coroutine
-        assert asyncio.iscoroutine(result)
-        text, components = await result
+    # Sync agent with LLM returns coroutine
+    assert asyncio.iscoroutine(result)
+    text, components = await result
 
-        assert text == "Sales data: Revenue $100K, Users 500"
-        assert isinstance(components, list)
-        assert len(components) == 1
-        assert components[0]["type"] == "table"
-
-    except ImportError:
-        # Skip if FastAPI not available
-        pytest.skip("FastAPI not available for full integration test")
+    assert text == "Sales data: Revenue $100K, Users 500"
+    assert isinstance(components, list)
+    assert len(components) == 1
+    assert components[0]["type"] == "card"
 
 
 def test_ai_invalid_agent():
@@ -162,7 +160,8 @@ def test_callback_protocol_implementation():
 
     # Test shared server initialization
     server = _get_shared_server(9999)
-    assert callback.id in server.callbacks
+    assert server is not None
+    assert server.port == 9999
 
 
 @pytest.mark.asyncio
@@ -173,15 +172,20 @@ async def test_callback_lifecycle_management():
     callback = Http(id="test-lifecycle-123")
     server = _get_shared_server()
 
-    # Should be registered on creation
+    # Start waiting for interaction (this registers the callback)
+    interaction_task = asyncio.create_task(callback.await_interaction(timeout=1))
+    await asyncio.sleep(0.01)  # Let registration happen
+
+    # Now should be registered
     assert "test-lifecycle-123" in server.callbacks
-    assert isinstance(server.callbacks["test-lifecycle-123"], asyncio.Future)
+    _loop, future = server.callbacks["test-lifecycle-123"]
+    assert isinstance(future, asyncio.Future)
 
     # Simulate callback triggering
-    server.callbacks["test-lifecycle-123"].set_result({"action": "test", "data": "value"})
+    _loop.call_soon_threadsafe(future.set_result, {"action": "test", "data": "value"})
 
-    # Should get result and clean up
-    result = await callback.await_interaction()
+    # Should get result
+    result = await interaction_task
     assert result == {"action": "test", "data": "value"}
     assert "test-lifecycle-123" not in server.callbacks
 

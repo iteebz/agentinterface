@@ -1,8 +1,8 @@
-import { describe, expect, it, beforeEach, afterEach } from 'vitest';
-import fs from 'node:fs';
-import fsPromises from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import fs from "node:fs";
+import fsPromises from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 function writeFile(root: string, filePath: string, contents: string) {
   const absolutePath = path.join(root, filePath);
@@ -10,19 +10,21 @@ function writeFile(root: string, filePath: string, contents: string) {
   fs.writeFileSync(absolutePath, contents);
 }
 
-describe('autodiscovery CLI', () => {
+describe("autodiscovery CLI", () => {
   let tempRoot: string;
 
   beforeEach(() => {
-    tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agentinterface-autodiscovery-'));
+    tempRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "agentinterface-autodiscovery-"),
+    );
   });
 
   afterEach(async () => {
     await fsPromises.rm(tempRoot, { recursive: true, force: true });
   });
 
-  it('extracts metadata from exports ending with Metadata', async () => {
-    const { extractMetadata } = await import('../scripts/discover.mjs');
+  it("extracts metadata from exports ending with Metadata", async () => {
+    const { extractMetadata } = await import("../scripts/discover.mjs");
     const source = `
       import React from 'react';
       export const FancyMetadata = {
@@ -34,26 +36,33 @@ describe('autodiscovery CLI', () => {
       export const Fancy = () => <div />;
     `;
 
-    const result = extractMetadata(source, path.join(tempRoot, 'Fancy.tsx'), tempRoot);
+    const result = extractMetadata(
+      source,
+      path.join(tempRoot, "Fancy.tsx"),
+      tempRoot,
+    );
     expect(result).toMatchObject({
-      type: 'fancy',
-      description: 'Fancy component',
-      category: 'demo',
+      type: "fancy",
+      description: "Fancy component",
+      category: "demo",
     });
   });
 
-  it('generates ai.json without wrappers for consumer projects', async () => {
-    const { runDiscovery } = await import('../scripts/discover.mjs');
+  it("generates ai.json without wrappers for consumer projects", async () => {
+    const { runDiscovery } = await import("../scripts/discover.mjs");
 
     const pkgJson = {
-      name: 'demo-app',
-      version: '1.0.0',
+      name: "demo-app",
+      version: "1.0.0",
     };
-    fs.writeFileSync(path.join(tempRoot, 'package.json'), JSON.stringify(pkgJson));
+    fs.writeFileSync(
+      path.join(tempRoot, "package.json"),
+      JSON.stringify(pkgJson),
+    );
 
     writeFile(
       tempRoot,
-      path.join('node_modules', 'agentinterface', 'src', 'ai', 'sample.tsx'),
+      path.join("node_modules", "agentinterface", "src", "ai", "sample.tsx"),
       `import React from 'react';
        export const SampleMetadata = {
          type: 'sample-card',
@@ -67,7 +76,7 @@ describe('autodiscovery CLI', () => {
 
     writeFile(
       tempRoot,
-      path.join('src', 'components', 'ai', 'local.tsx'),
+      path.join("src", "components", "ai", "local.tsx"),
       `import React from 'react';
        export function Local() { return <div>Local</div>; }
        export const LocalMetadata = {
@@ -81,17 +90,17 @@ describe('autodiscovery CLI', () => {
 
     const registry = runDiscovery({ rootDir: tempRoot });
 
-    const registryPath = path.join(tempRoot, 'ai.json');
+    const registryPath = path.join(tempRoot, "ai.json");
     expect(fs.existsSync(registryPath)).toBe(true);
-    expect(fs.existsSync(path.join(tempRoot, 'ai.tsx'))).toBe(false);
+    expect(fs.existsSync(path.join(tempRoot, "ai.tsx"))).toBe(false);
 
-    const persisted = JSON.parse(fs.readFileSync(registryPath, 'utf8'));
+    const persisted = JSON.parse(fs.readFileSync(registryPath, "utf8"));
     expect(persisted.total_components).toBe(2);
     expect(Object.keys(persisted.components)).toEqual(
-      expect.arrayContaining(['sample-card', 'local-card']),
+      expect.arrayContaining(["sample-card", "local-card"]),
     );
-    expect(persisted.components['sample-card'].source).toBe('agentinterface');
-    expect(persisted.components['local-card'].source).toBe('demo-app');
+    expect(persisted.components["sample-card"].source).toBe("agentinterface");
+    expect(persisted.components["local-card"].source).toBe("demo-app");
     expect(registry).toEqual(persisted);
   });
 });

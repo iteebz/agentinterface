@@ -1,5 +1,5 @@
-import React, { useId, useState } from 'react';
-import type { CallbackEvent } from '../types';
+import React, { useId, useState } from "react";
+import type { CallbackEvent } from "../types";
 
 export interface AccordionSection {
   title: string;
@@ -13,28 +13,36 @@ export interface AccordionProps {
   onCallback?: (event: CallbackEvent) => void;
 }
 
-function AccordionComponent({ sections = [], className, onCallback }: AccordionProps) {
+function AccordionComponent({
+  sections = [],
+  className,
+  onCallback,
+}: AccordionProps) {
   const instanceId = useId();
   const [openSections, setOpenSections] = useState<Set<number>>(
-    new Set(sections.map((section, index) => section.defaultExpanded ? index : -1).filter(i => i >= 0))
+    new Set(
+      sections
+        .map((section, index) => (section.defaultExpanded ? index : -1))
+        .filter((i) => i >= 0),
+    ),
   );
 
   const toggle = (index: number) => {
     const section = sections[index];
     const newOpen = new Set(openSections);
     const isOpening = !newOpen.has(index);
-    
+
     if (newOpen.has(index)) {
       newOpen.delete(index);
     } else {
       newOpen.add(index);
     }
     setOpenSections(newOpen);
-    
+
     onCallback?.({
-      type: 'toggle',
-      component: 'accordion',
-      data: { title: section?.title, expanded: isOpening }
+      type: "toggle",
+      component: "accordion",
+      data: { title: section?.title, expanded: isOpening },
     });
   };
 
@@ -78,28 +86,27 @@ function AccordionComponent({ sections = [], className, onCallback }: AccordionP
 
 export const Accordion = AccordionComponent;
 
-// AgentInterface Metadata - autodiscovery pattern
-export const AccordionMetadata = {
-  type: 'accordion',
-  description: 'Collapsible sections with expandable content',
+export const metadata = {
+  type: "accordion",
+  description: "Collapsible sections with expandable content",
   schema: {
-    type: 'object',
+    type: "object",
     properties: {
       sections: {
-        type: 'array',
+        type: "array",
         items: {
-          type: 'object',
+          type: "object",
           properties: {
-            title: { type: 'string' },
-            content: { type: 'any' },
-            defaultExpanded: { type: 'boolean', optional: true }
+            title: { type: "string" },
+            content: { type: "any" },
+            defaultExpanded: { type: "boolean", optional: true },
           },
-          required: ['title', 'content']
-        }
+          required: ["title", "content"],
+        },
       },
-      className: { type: 'string', optional: true }
+      className: { type: "string", optional: true },
     },
-    required: ['sections']
+    required: ["sections"],
   },
-  category: 'layout'
+  category: "layout",
 };

@@ -2,26 +2,23 @@
 
 import os
 import time
+from pathlib import Path
 from typing import Any, Callable, Optional, Protocol, Union, runtime_checkable
 
 from .logger import logger
 
-# Load environment variables at import time
 try:
     from dotenv import load_dotenv
 
     load_dotenv(override=True)
 except ImportError:
-    from pathlib import Path
-
     env_file = Path(".env")
     if env_file.exists():
-        with open(env_file) as f:
-            for line in f:
-                line = line.strip()
-                if line and "=" in line and not line.startswith("#"):
-                    key, value = line.split("=", 1)
-                    os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line and "=" in line and not line.startswith("#"):
+                key, value = line.split("=", 1)
+                os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
 
 _rotators = {}
 
@@ -40,8 +37,7 @@ class Rotator:
         keys = []
 
         for i in range(1, 11):
-            key = os.getenv(f"{self.service}_API_KEY_{i}")
-            if key:
+            if key := os.getenv(f"{self.service}_API_KEY_{i}"):
                 keys.append(key)
 
         aliases = []
@@ -52,8 +48,7 @@ class Rotator:
 
         for alias in aliases:
             for i in range(1, 11):
-                key = os.getenv(f"{alias}_{i}")
-                if key and key not in keys:
+                if (key := os.getenv(f"{alias}_{i}")) and key not in keys:
                     keys.append(key)
 
         return keys
@@ -94,7 +89,7 @@ async def with_rotation(service: str, fn: Callable, *args, **kwargs) -> Any:
         key = rot.key
         if not key:
             logger.error(f"No {service} keys found")
-            raise ValueError(f"No {service} keys found")
+            raise ImportError(f"No {service} keys found")
 
         try:
             return await fn(key, *args, **kwargs)
@@ -146,28 +141,9 @@ class LLM(Protocol):
         ...
 
 
-def llm(provider: Union[str, LLM] = "openai") -> LLM:
-    """Create or pass through LLM provider.
+def create_llm(provider: Union[str, LLM] = "openai") -> LLM:
+    """Create or pass through LLM provider."""
 
-    Args:
-        provider: String provider name or LLM instance
-
-    Returns:
-        LLM provider instance
-
-    Examples:
-        model = llm("openai")
-        model = llm("gemini")
-        model = llm("anthropic")
-
-        class CustomLLM(LLM):
-            async def generate(self, prompt: str) -> str:
-                return "Custom response"
-
-        model = llm(CustomLLM())
-    """
-
-    # If already an LLM instance, pass through
     if isinstance(provider, LLM):
         return provider
 
@@ -185,13 +161,13 @@ class OpenAI(LLM):
     """OpenAI LLM provider."""
 
     def __init__(self, model: Optional[str] = None):
-        self.model = model or "gpt-4o-mini"
+        self.model = model or "gpt-4.1-mini"
 
     async def generate(self, prompt: str) -> str:
         try:
             import openai
         except ImportError:
-            raise RuntimeError("pip install openai") from None
+            raise ImportError("pip install openai") from None
 
         async def _gen(key: str) -> str:
             client = openai.AsyncOpenAI(api_key=key)
@@ -210,13 +186,13 @@ class Gemini(LLM):
     """Gemini LLM provider."""
 
     def __init__(self, model: Optional[str] = None):
-        self.model = model or "gemini-2.5-flash-lite"
+        self.model = model or "gemini-2.5-flash"
 
     async def generate(self, prompt: str) -> str:
         try:
             import google.genai as genai
         except ImportError:
-            raise RuntimeError("pip install google-genai") from None
+            raise ImportError("pip install google-genai") from None
 
         async def _gen(key: str) -> str:
             client = genai.Client(api_key=key)
@@ -230,13 +206,13 @@ class Anthropic(LLM):
     """Anthropic LLM provider."""
 
     def __init__(self, model: Optional[str] = None):
-        self.model = model or "claude-3-5-haiku-20241022"
+        self.model = model or "claude-4.5-sonnet-latest"
 
     async def generate(self, prompt: str) -> str:
         try:
             import anthropic
         except ImportError:
-            raise RuntimeError("pip install anthropic") from None
+            raise ImportError("pip install anthropic") from None
 
         async def _gen(key: str) -> str:
             client = anthropic.AsyncAnthropic(api_key=key)

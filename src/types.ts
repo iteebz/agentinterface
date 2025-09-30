@@ -2,22 +2,30 @@ export interface ComponentMetadata {
   type: string;
   description: string;
   schema: {
-    type: string;
-    properties: Record<string, any>;
+    type: "object";
+    properties: Record<
+      string,
+      {
+        type: string;
+        optional?: boolean;
+        enum?: string[];
+        items?: any;
+      }
+    >;
     required: string[];
   };
   category: string;
 }
 
-export interface ComponentData {
+export interface ComponentJSON {
   type: string;
   data: Record<string, any>;
 }
 
-export type ComponentArray = ComponentData[];
+export type ComponentArray = ComponentJSON[];
 
 export interface CallbackEvent {
-  type: 'click' | 'change' | 'select' | 'toggle';
+  type: "click" | "change" | "select" | "toggle";
   component: string;
   data: Record<string, any>;
 }
@@ -25,7 +33,7 @@ export interface CallbackEvent {
 export interface AgentResponse {
   id: string;
   timestamp: number;
-  content: ComponentData | ComponentArray;
+  content: ComponentJSON | ComponentArray;
 }
 
 export interface AgentCanvasProps {
@@ -35,11 +43,11 @@ export interface AgentCanvasProps {
 }
 
 export function formatLLM(event: CallbackEvent): string {
-  const actionMap: Record<CallbackEvent['type'], string> = {
-    click: 'clicked',
-    change: 'changed',
-    select: 'selected',
-    toggle: 'toggled',
+  const actionMap: Record<CallbackEvent["type"], string> = {
+    click: "clicked",
+    change: "changed",
+    select: "selected",
+    toggle: "toggled",
   };
   const action = actionMap[event.type] ?? event.type;
   const detail =
@@ -47,6 +55,6 @@ export function formatLLM(event: CallbackEvent): string {
     event.data.text ||
     event.data.id ||
     event.data.label ||
-    '';
-  return `User ${action} ${event.component}${detail ? ': ' + detail : ''}`;
+    "";
+  return `User ${action} ${event.component}${detail ? ": " + detail : ""}`;
 }

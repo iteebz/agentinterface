@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export interface ImageProps {
   src: string;
@@ -28,7 +28,9 @@ function ImageComponent({ src, alt, caption, href, className }: ImageProps) {
         image
       )}
       {caption && (
-        <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">{caption}</div>
+        <div className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+          {caption}
+        </div>
       )}
     </div>
   );
@@ -38,20 +40,19 @@ function ImageComponent({ src, alt, caption, href, className }: ImageProps) {
 
 export const Image = ImageComponent;
 
-// AgentInterface Metadata - autodiscovery pattern
-export const ImageMetadata = {
-  type: 'image',
-  description: 'Single image with optional caption and link',
+export const metadata = {
+  type: "image",
+  description: "Single image with optional caption and link",
   schema: {
-    type: 'object',
+    type: "object",
     properties: {
-      src: { type: 'string' },
-      alt: { type: 'string' },
-      caption: { type: 'string', optional: true },
-      href: { type: 'string', optional: true },
-      className: { type: 'string', optional: true }
+      src: { type: "string" },
+      alt: { type: "string" },
+      caption: { type: "string", optional: true },
+      href: { type: "string", optional: true },
+      className: { type: "string", optional: true },
     },
-    required: ['src', 'alt']
+    required: ["src", "alt"],
   },
-  category: 'media'
+  category: "media",
 };

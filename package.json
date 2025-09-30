@@ -20,9 +20,10 @@
     "dev": "echo 'Import components directly'",
     "test": "npm run test:unit",
     "visual": "node scripts/visual-inspect.js",
-    "typecheck": "tsc --noEmit --include 'src/**/*' --include 'tests/**/*'",
+    "typecheck": "tsc --noEmit",
     "format": "prettier --write 'src/**/*.{ts,tsx}' 'tests/**/*.{ts,tsx}'",
-    "lint": "eslint src/ tests/",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
     "build": "tsc",
     "prepare": "npm run build",
     "test:unit": "vitest run"

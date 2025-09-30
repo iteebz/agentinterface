@@ -41,12 +41,13 @@ def test_protocol_explicit_components_override():
     explicit_components = ["card", "suggestions"]
     instructions = protocol(explicit_components)
 
-    # Should include all explicit components
-    for component in explicit_components:
-        assert component in instructions
+    # Extract only component list (before "Composition patterns:")
+    available_section = instructions.split("Composition patterns:")[0]
+    lines = available_section.split("\n")
+    component_lines = [line for line in lines if line.startswith("- ") and ":" in line]
+    listed_components = [line.split(":")[0].replace("- ", "").strip() for line in component_lines]
 
-    # Should not auto-include other components
-    assert "table" not in instructions or "table" in explicit_components
+    assert set(listed_components) == set(explicit_components)
 
 
 def test_protocol_explicit_components_used():

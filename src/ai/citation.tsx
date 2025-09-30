@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import type { CallbackEvent } from '../types';
+import React, { useState } from "react";
+import type { CallbackEvent } from "../types";
 
 interface CitationItem {
   id: string;
@@ -21,23 +21,23 @@ function CitationComponent(props: CitationProps) {
   const [expandedRefs, setExpandedRefs] = useState<Set<string>>(new Set());
 
   const toggleExpanded = (refId: string) => {
-    const citation = citations.find(c => c.id === refId);
+    const citation = citations.find((c) => c.id === refId);
     setExpandedRefs((prev) => {
       const newSet = new Set(prev);
       const isOpening = !newSet.has(refId);
-      
+
       if (newSet.has(refId)) {
         newSet.delete(refId);
       } else {
         newSet.add(refId);
       }
-      
+
       onCallback?.({
-        type: 'toggle',
-        component: 'citation',
-        data: { title: citation?.title, expanded: isOpening }
+        type: "toggle",
+        component: "citation",
+        data: { title: citation?.title, expanded: isOpening },
       });
-      
+
       return newSet;
     });
   };
@@ -45,7 +45,9 @@ function CitationComponent(props: CitationProps) {
   return (
     <div className={className}>
       <div className="space-y-2">
-        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">Sources:</div>
+        <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+          Sources:
+        </div>
         {citations.map((citation) => (
           <div key={citation.id}>
             <button
@@ -56,9 +58,15 @@ function CitationComponent(props: CitationProps) {
             </button>
             {expandedRefs.has(citation.id) && (
               <div className="ml-4 mt-2 border-l-2 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 p-3 rounded-r-lg">
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase">{citation.type}</div>
-                <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">{citation.excerpt}</div>
-                <div className="text-sm text-gray-900 dark:text-gray-100">{citation.content}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 uppercase">
+                  {citation.type}
+                </div>
+                <div className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                  {citation.excerpt}
+                </div>
+                <div className="text-sm text-gray-900 dark:text-gray-100">
+                  {citation.content}
+                </div>
                 {citation.url && (
                   <a
                     href={citation.url}
@@ -80,31 +88,30 @@ function CitationComponent(props: CitationProps) {
 
 export const Citation = CitationComponent;
 
-// AgentInterface Metadata - autodiscovery pattern
-export const CitationMetadata = {
-  type: 'citation',
-  description: 'Source citations with expandable content',
+export const metadata = {
+  type: "citation",
+  description: "Source citations with expandable content",
   schema: {
-    type: 'object',
+    type: "object",
     properties: {
       citations: {
-        type: 'array',
+        type: "array",
         items: {
-          type: 'object',
+          type: "object",
           properties: {
-            id: { type: 'string' },
-            title: { type: 'string' },
-            type: { type: 'string' },
-            excerpt: { type: 'string' },
-            content: { type: 'string' },
-            url: { type: 'string', optional: true }
+            id: { type: "string" },
+            title: { type: "string" },
+            type: { type: "string" },
+            excerpt: { type: "string" },
+            content: { type: "string" },
+            url: { type: "string", optional: true },
           },
-          required: ['id', 'title', 'type', 'excerpt', 'content']
-        }
+          required: ["id", "title", "type", "excerpt", "content"],
+        },
       },
-      className: { type: 'string', optional: true }
+      className: { type: "string", optional: true },
     },
-    required: ['citations']
+    required: ["citations"],
   },
-  category: 'content'
+  category: "content",
 };

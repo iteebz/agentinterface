@@ -1,11 +1,10 @@
-// Components with metadata for autodiscovery
-export { Accordion, AccordionMetadata } from './accordion';
-export { Card, CardMetadata } from './card';
-export { Embed, EmbedMetadata } from './embed';
-export { Image, ImageMetadata } from './image';
-export { Markdown, MarkdownMetadata } from './markdown';
-export { Citation, CitationMetadata } from './citation';
-export { Suggestions, SuggestionsMetadata } from './suggestions';
-export { Table, TableMetadata } from './table';
-export { Tabs, TabsMetadata } from './tabs';
-export { Timeline, TimelineMetadata } from './timeline';
+export { Accordion, metadata as AccordionMetadata } from "./accordion";
+export { Card, metadata as CardMetadata } from "./card";
+export { Embed, metadata as EmbedMetadata } from "./embed";
+export { Image, metadata as ImageMetadata } from "./image";
+export { Markdown, metadata as MarkdownMetadata } from "./markdown";
+export { Citation, metadata as CitationMetadata } from "./citation";
+export { Suggestions, metadata as SuggestionsMetadata } from "./suggestions";
+export { Table, metadata as TableMetadata } from "./table";
+export { Tabs, metadata as TabsMetadata } from "./tabs";
+export { Timeline, metadata as TimelineMetadata } from "./timeline";

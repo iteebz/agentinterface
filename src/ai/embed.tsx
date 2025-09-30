@@ -1,6 +1,6 @@
-import React from 'react';
+import React from "react";
 
-const SAFE_PROTOCOLS = new Set(['http:', 'https:']);
+const SAFE_PROTOCOLS = new Set(["http:", "https:"]);
 
 function sanitizeEmbedSrc(candidate: string): string | null {
   if (!candidate) return null;
@@ -9,7 +9,7 @@ function sanitizeEmbedSrc(candidate: string): string | null {
   if (!trimmed) return null;
 
   try {
-    const url = new URL(trimmed, 'https://placeholder.local');
+    const url = new URL(trimmed, "https://placeholder.local");
     return SAFE_PROTOCOLS.has(url.protocol) ? trimmed : null;
   } catch {
     return null;
@@ -31,17 +31,21 @@ function EmbedComponent({
   width = "100%",
   height = "400px",
   allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
-  className
+  className,
 }: EmbedProps) {
   const sanitizedSrc = sanitizeEmbedSrc(src);
 
   if (!sanitizedSrc) {
-    console.warn('Embed blocked unsafe src value', src);
+    console.warn("Embed blocked unsafe src value", src);
   }
 
   return (
     <div className={className}>
-      {title && <div className="text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">{title}</div>}
+      {title && (
+        <div className="text-sm font-medium mb-2 text-gray-900 dark:text-gray-100">
+          {title}
+        </div>
+      )}
       {sanitizedSrc ? (
         <iframe
           src={sanitizedSrc}
@@ -66,21 +70,20 @@ function EmbedComponent({
 
 export const Embed = EmbedComponent;
 
-// AgentInterface Metadata - autodiscovery pattern
-export const EmbedMetadata = {
-  type: 'embed',
-  description: 'Embedded iframe content for videos and interactive demos',
+export const metadata = {
+  type: "embed",
+  description: "Embedded iframe content for videos and interactive demos",
   schema: {
-    type: 'object',
+    type: "object",
     properties: {
-      src: { type: 'string' },
-      title: { type: 'string', optional: true },
-      width: { type: 'string', optional: true },
-      height: { type: 'string', optional: true },
-      allow: { type: 'string', optional: true },
-      className: { type: 'string', optional: true }
+      src: { type: "string" },
+      title: { type: "string", optional: true },
+      width: { type: "string", optional: true },
+      height: { type: "string", optional: true },
+      allow: { type: "string", optional: true },
+      className: { type: "string", optional: true },
     },
-    required: ['src']
+    required: ["src"],
   },
-  category: 'media'
+  category: "media",
 };

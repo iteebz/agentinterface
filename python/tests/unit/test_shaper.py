@@ -1,6 +1,7 @@
 """Validation tests for component shaping."""
 
 import json
+
 import pytest
 
 from agentinterface.shaper import shape

@@ -1,14 +1,14 @@
 /**
  * Interactive suggestion buttons.
  */
-import React from 'react';
-import type { CallbackEvent } from '../types';
+import React from "react";
+import type { CallbackEvent } from "../types";
 
 export interface Suggestion {
   text: string;
   id?: string;
   context?: string;
-  priority?: 'high' | 'medium' | 'low';
+  priority?: "high" | "medium" | "low";
 }
 
 export interface SuggestionsProps {
@@ -20,15 +20,19 @@ export interface SuggestionsProps {
 
 function SuggestionsComponent({
   suggestions,
-  title = 'Continue the conversation',
+  title = "Continue the conversation",
   className,
   onCallback,
 }: SuggestionsProps) {
   const handleSuggestionClick = (suggestion: Suggestion) => {
     onCallback?.({
-      type: 'select',
-      component: 'suggestions',
-      data: { text: suggestion.text, id: suggestion.id, priority: suggestion.priority }
+      type: "select",
+      component: "suggestions",
+      data: {
+        text: suggestion.text,
+        id: suggestion.id,
+        priority: suggestion.priority,
+      },
     });
   };
 
@@ -46,7 +50,7 @@ function SuggestionsComponent({
             className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-full px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 transition-colors"
           >
             {suggestion.text}
-            {suggestion.priority === 'high' && (
+            {suggestion.priority === "high" && (
               <span className="bg-gray-900 dark:bg-gray-100 ml-1.5 w-1.5 h-1.5 rounded-full inline-block" />
             )}
           </button>
@@ -58,30 +62,33 @@ function SuggestionsComponent({
 
 export const Suggestions = SuggestionsComponent;
 
-// AgentInterface Metadata - autodiscovery pattern
-export const SuggestionsMetadata = {
-  type: 'suggestions',
-  description: 'Interactive follow-up prompts for conversation',
+export const metadata = {
+  type: "suggestions",
+  description: "Interactive follow-up prompts for conversation",
   schema: {
-    type: 'object',
+    type: "object",
     properties: {
       suggestions: {
-        type: 'array',
+        type: "array",
         items: {
-          type: 'object',
+          type: "object",
           properties: {
-            text: { type: 'string' },
-            id: { type: 'string', optional: true },
-            context: { type: 'string', optional: true },
-            priority: { type: 'string', enum: ['high', 'medium', 'low'], optional: true }
+            text: { type: "string" },
+            id: { type: "string", optional: true },
+            context: { type: "string", optional: true },
+            priority: {
+              type: "string",
+              enum: ["high", "medium", "low"],
+              optional: true,
+            },
           },
-          required: ['text']
-        }
+          required: ["text"],
+        },
       },
-      title: { type: 'string', optional: true },
-      className: { type: 'string', optional: true }
+      title: { type: "string", optional: true },
+      className: { type: "string", optional: true },
     },
-    required: ['suggestions']
+    required: ["suggestions"],
   },
-  category: 'interactive'
+  category: "interactive",
 };

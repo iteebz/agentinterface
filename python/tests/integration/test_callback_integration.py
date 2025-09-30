@@ -48,18 +48,23 @@ async def test_http_callback_endpoint():
 
 @pytest.mark.asyncio
 async def test_http_callback_lifecycle():
-    """Test HTTP callback self-managed lifecycle."""
+    """Test HTTP callback lazy registration on await."""
     callback = Http(id="test-lifecycle")
     server = _get_shared_server()
 
-    # Callback should register itself
+    # Start interaction (registers callback)
+    interaction_task = asyncio.create_task(callback.await_interaction(timeout=1))
+    await asyncio.sleep(0.01)
+
+    # Now registered
     assert "test-lifecycle" in server.callbacks
+    _loop, future = server.callbacks["test-lifecycle"]
 
     # Simulate callback activation
-    server.callbacks["test-lifecycle"].set_result({"action": "click", "data": "value"})
+    _loop.call_soon_threadsafe(future.set_result, {"action": "click", "data": "value"})
 
     # Should receive the interaction
-    result = await callback.await_interaction()
+    result = await interaction_task
     assert result == {"action": "click", "data": "value"}
 
     # Should have cleaned up after itself
@@ -96,21 +101,25 @@ async def test_shared_server_singleton():
 @pytest.mark.asyncio
 async def test_callback_cleanup_abandoned():
     """Test abandoned callbacks are cleaned up after timeout."""
-    Http(id="test-cleanup", port=8123)
+    callback = Http(id="test-cleanup", port=8123)
     server = _get_shared_server(port=8123)
 
-    # Callback should be registered
+    # Start interaction to register
+    _interaction_task = asyncio.create_task(callback.await_interaction(timeout=0.5))
+    await asyncio.sleep(0.01)
+
+    # Now should be registered
     assert "test-cleanup" in server.callbacks
 
-    # Create future with timestamp for cleanup
-    future = server.callbacks["test-cleanup"]
+    # Modify timestamp to appear abandoned
+    _loop, future = server.callbacks["test-cleanup"]
     future._created_at = asyncio.get_event_loop().time() - 700  # 11+ minutes ago
 
     # Run one iteration of cleanup manually (avoid infinite loop)
     current_time = asyncio.get_event_loop().time()
     abandoned = []
 
-    for callback_id, cb_future in server.callbacks.items():
+    for callback_id, (_cb_loop, cb_future) in server.callbacks.items():
         if (
             not cb_future.done()
             and hasattr(cb_future, "_created_at")
@@ -119,9 +128,11 @@ async def test_callback_cleanup_abandoned():
             abandoned.append(callback_id)
 
     for callback_id in abandoned:
-        if callback_id in server.callbacks:
-            server.callbacks[callback_id].cancel()
-            del server.callbacks[callback_id]
+        entry = server.callbacks.pop(callback_id, None)
+        if entry:
+            cb_loop, cb_future = entry
+            if not cb_future.done():
+                cb_loop.call_soon_threadsafe(cb_future.cancel)
 
     # Should be cleaned up due to age
     assert "test-cleanup" not in server.callbacks

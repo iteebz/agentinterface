@@ -3,9 +3,12 @@ import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 
 export default [
+  {
+    ignores: ['dist/', 'node_modules/', 'python/', 'cli/', 'scripts/', '**/*.js', '**/*.mjs']
+  },
   js.configs.recommended,
   {
-    files: ['src/**/*.{ts,tsx}'],
+    files: ['src/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {

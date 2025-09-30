@@ -36,4 +36,12 @@ clean:
 commits:
     @git --no-pager log --pretty=format:"%ar %s"
 
-ci: format fix lint test discover
+ci:
+    @npm run lint:fix || true
+    @npm run format || true
+    @cd python && poetry run ruff format .
+    @cd python && poetry run ruff check . --fix
+    @npm run lint
+    @cd python && poetry run ruff check .
+    @just test
+    @just discover
