@@ -1,125 +1,192 @@
 # AgentInterface
 
-**Universal agent-to-UI wrapper.** Agents choose components via LLM reasoning.
+Agents choose UI components. Zero ceremony.
 
 ```bash
-npm install agentinterface  # React components
-pip install agentinterface  # Python wrapper
+npm install agentinterface  # React renderer + 10 components
+pip install agentinterface  # Python agent wrapper
 ```
 
-## Core Pattern
+## Pattern
 
-**Agent text → Shaper LLM → Component JSON → React UI**
+```
+Agent text → Shaper LLM → Component JSON → React UI
+```
 
-Instead of parsing agent responses, let a shaper LLM select appropriate components:
+Any agent. Any LLM. Any component.
+
+## Python: Enhance Agents
 
 ```python
 from agentinterface import ai
 
-# Any agent becomes component-aware
-enhanced = ai(your_agent, llm="gemini")
-text, components = await enhanced("Show Q3 sales")
-# Returns: [{"type": "table", "data": {"headers": [...], "rows": [...]}}]
-```
+def sales_agent(query: str) -> str:
+    return "Q3 revenue: $2M, up 15%. Users: 10K."
 
-```typescript
-import { render } from 'agentinterface';
-
-// Component JSON → React UI
-<div>{render(JSON.stringify(components))}</div>
-```
-
-## Quick Start
-
-### Python: Enhance Any Agent
-
-```python
-from agentinterface import ai
-
-async def sales_agent(query: str) -> str:
-    return "Q3 revenue up 15%. Key metrics: $2M revenue, 10K users."
-
-# Add component generation
 enhanced = ai(sales_agent, llm="gemini")
-result = await enhanced("Show Q3 dashboard")
-# Returns: (text, components)
+text, components = await enhanced("Show Q3 dashboard")
+
+# Returns:
+# text: "Q3 revenue: $2M, up 15%. Users: 10K."
+# components: [{"type": "card", "data": {"title": "Q3 Revenue", "value": "$2M"}}]
 ```
 
-### React: Render Components
+Works with sync, async, streaming agents.
 
-```typescript
+## React: Render Components
+
+```tsx
 import { render } from 'agentinterface';
 
-function Dashboard({ components }) {
-  return <div>{render(components)}</div>;
+function Dashboard({ componentJSON }) {
+  return <div>{render(componentJSON)}</div>;
 }
 ```
 
-**Built-in components:** `card`, `table`, `timeline`, `accordion`, `tabs`, `markdown`, `suggestions`, `citation`, `image`, `embed`
+10 built-in components: `card` `table` `timeline` `accordion` `tabs` `markdown` `image` `embed` `citation` `suggestions`
+
+## Array Composition
+
+```python
+# Vertical stack
+[card1, card2, card3]
+
+# Horizontal grid
+[[card1, card2, card3]]
+
+# Mixed layout
+[
+  card1,              # Full width
+  [card2, card3],     # Side by side
+  table1              # Full width
+]
+```
+
+Nested arrays = horizontal. Arrays = vertical. Infinite nesting.
 
 ## Custom Components
 
-Create component + metadata, run autodiscovery:
+Create component with metadata:
 
-```typescript
-// src/ai/widget.tsx
-export const Widget = ({ title, value }) => (
-  <div><h3>{title}</h3><span>{value}</span></div>
+```tsx
+// src/ai/metric.tsx
+export const Metric = ({ label, value, change }) => (
+  <div>
+    <span>{label}</span>
+    <strong>{value}</strong>
+    <span>{change}</span>
+  </div>
 );
 
 export const metadata = {
-  type: 'widget',
-  description: 'Performance widget',
-  schema: { /* JSON Schema */ },
-  category: 'custom'
+  type: 'metric',
+  description: 'Key performance metric with change indicator',
+  schema: {
+    type: 'object',
+    properties: {
+      label: { type: 'string' },
+      value: { type: 'string' },
+      change: { type: 'string', optional: true }
+    },
+    required: ['label', 'value']
+  },
+  category: 'content'
 };
 ```
 
+Run autodiscovery:
+
 ```bash
-npx agentinterface discover  # Generates ai.json
+npx agentinterface discover
 ```
 
-Components automatically available to Python shaper LLM.
+Component automatically available to shaper LLM. Import and pass to renderer:
 
-## Key Features
+```tsx
+import { render } from 'agentinterface';
+import { Metric } from './ai/metric';
 
-- **Universal**: Works with any agent/LLM combination
-- **Extensible**: Add custom components via metadata
-- **Interactive**: Bidirectional callbacks for user interaction
-- **Compositional**: Multiple components with layout rules
+render(componentJSON, { metric: Metric })
+```
 
-## Documentation
-
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Technical design and implementation
-- **[protocol.md](docs/protocol.md)** - Agent Interface Protocol (AIP) specification  
-- **[artifacts.md](docs/artifacts.md)** - Comparison with Direct Artifacts
-
-## API Reference
+## Bidirectional Callbacks
 
 ```python
-# Python
-ai(agent, llm, components=None, callback=None)
-protocol(components=None)  # Generate LLM instructions  
-shape(text, context, llm)  # Direct text → components
+from agentinterface import ai
+from agentinterface.callback import Http
+
+callback = Http()
+enhanced = ai(agent, llm="gemini", callback=callback)
+
+async for event in enhanced("Show sales dashboard"):
+    if event["type"] == "component":
+        components = event["data"]["components"]
+        callback_url = event["data"]["callback_url"]
+        
+        # User clicks → callback receives interaction
+        interaction = await callback.await_interaction(timeout=300)
+        
+        # Agent continues based on interaction
 ```
 
-```typescript
-// TypeScript
-render(json, components?, onCallback?, metadata?)
+Components send data back to agent. Conversational UI.
+
+## API
+
+**Python:**
+```python
+ai(agent, llm, components=None, callback=None, timeout=300)
+protocol(components=None)
+shape(text, context, llm)
 ```
+
+**TypeScript:**
+```tsx
+render(json, components?, onCallback?)
+```
+
+**LLM Providers:**
+```python
+# String providers (default models)
+ai(agent, llm="openai")     # gpt-4.1-mini
+ai(agent, llm="gemini")     # gemini-2.5-flash
+ai(agent, llm="anthropic")  # claude-4.5-sonnet-latest
+
+# Custom models
+from agentinterface.llms import OpenAI, Gemini, Anthropic
+ai(agent, llm=OpenAI(model="gpt-4o"))
+ai(agent, llm=Gemini(model="gemini-pro"))
+
+# Custom LLM
+from agentinterface.llms import LLM
+
+class CustomLLM(LLM):
+    async def generate(self, prompt: str) -> str:
+        ...
+
+ai(agent, llm=CustomLLM())
+```
+
+## Docs
+
+- [**architecture.md**](docs/architecture.md) - System design
+- [**components.md**](docs/components.md) - Component reference
+- [**composition.md**](docs/composition.md) - Array composition
+- [**callbacks.md**](docs/callbacks.md) - Bidirectional communication
 
 ## Development
 
 ```bash
+# TypeScript
 npm install
-npm run build          # compile ESM bundle + d.ts into dist/
-npm run typecheck      # tsc --noEmit
-npm run lint           # eslint
-npm run test:unit      # Vitest suite
-python -m pytest       # from ./python
-```
+npm test
+npm run build
 
-Run `npm run build` before publishing so `package.json` entry points resolve to emitted files.
+# Python
+cd python
+poetry install
+poetry run pytest
+```
 
 ## License
 
