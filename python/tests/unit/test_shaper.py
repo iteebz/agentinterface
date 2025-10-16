@@ -1,4 +1,4 @@
-"""Validation tests for component shaping."""
+"""shape() contract tests - LLM output validation."""
 
 import json
 
@@ -11,12 +11,12 @@ class StubLLM:
     def __init__(self, payload: str):
         self.payload = payload
 
-    async def generate(self, prompt: str) -> str:  # pragma: no cover - simple stub
+    async def generate(self, prompt: str) -> str:
         return self.payload
 
 
 @pytest.mark.asyncio
-async def test_shape_accepts_known_component():
+async def test_shape_accepts_valid_component():
     llm = StubLLM('[{"type": "markdown", "data": {"content": "Hello"}}]')
     shaped = await shape("Hello", llm=llm)
     data = json.loads(shaped)
@@ -24,8 +24,8 @@ async def test_shape_accepts_known_component():
 
 
 @pytest.mark.asyncio
-async def test_shape_rejects_unknown_component_type():
-    llm = StubLLM('[{"type": "totally_fake", "data": {}}]')
+async def test_shape_rejects_unknown_type():
+    llm = StubLLM('[{"type": "nonexistent", "data": {}}]')
     with pytest.raises(ValueError):
         await shape("Hello", llm=llm)
 
@@ -38,36 +38,46 @@ async def test_shape_enforces_required_fields():
 
 
 @pytest.mark.asyncio
-async def test_shape_respects_allowed_component_list():
+async def test_shape_respects_whitelist():
     llm = StubLLM('[{"type": "card", "data": {}}]')
     with pytest.raises(ValueError):
         await shape("Hello", context={"components": ["markdown"]}, llm=llm)
 
 
 @pytest.mark.asyncio
-async def test_shape_validates_nested_components():
-    nested = """[{
-        "type": "card",
-        "data": {
-            "title": "Parent",
-            "content": {
-                "type": "markdown",
-                "data": {"content": "Nested"}
-            }
-        }
-    }]"""
-    llm = StubLLM(nested)
-    shaped = await shape("Test", llm=llm)
-    data = json.loads(shaped)
-    assert data[0]["data"]["content"]["type"] == "markdown"
+async def test_shape_without_llm():
+    result = await shape("Hello world", llm=None)
+    assert result == "Hello world"
 
 
 @pytest.mark.asyncio
-async def test_shape_validates_array_composition():
-    composed = """[[
-        {"type": "card", "data": {"title": "Left"}},
-        {"type": "card", "data": {"title": "Right"}}
-    ]]"""
+async def test_shape_rejects_invalid_json():
+    llm = StubLLM("not json {")
+    with pytest.raises(ValueError):
+        await shape("Test", llm=llm)
+
+
+@pytest.mark.asyncio
+async def test_shape_rejects_non_array():
+    llm = StubLLM('{"type": "markdown", "data": {"content": "test"}}')
+    with pytest.raises(ValueError):
+        await shape("Test", llm=llm)
+
+
+@pytest.mark.asyncio
+async def test_shape_nested_composition():
+    nested = '[{"type": "card", "data": {"title": "Parent", "content": [{"type": "markdown", "data": {"content": "Child"}}]}}]'
+    llm = StubLLM(nested)
+    shaped = await shape("Test", llm=llm)
+    data = json.loads(shaped)
+    assert data[0]["data"]["content"][0]["type"] == "markdown"
+
+
+@pytest.mark.asyncio
+async def test_shape_horizontal_composition():
+    composed = (
+        '[[{"type": "card", "data": {"title": "L"}}, {"type": "card", "data": {"title": "R"}}]]'
+    )
     llm = StubLLM(composed)
     shaped = await shape("Test", llm=llm)
     data = json.loads(shaped)
