@@ -1,66 +1,26 @@
-# Python
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.Python
 env/
 venv/
 .venv/
-pip-log.txt
-pip-delete-this-directory.txt
-.tox/
 .coverage
 .pytest_cache/
-htmlcov/
 .mypy_cache/
-.dmypy.json
 .ruff_cache/
-.ipynb_checkpoints
-.spyderproject
-.spyproject
-.idea/
-.vscode/
 
-# JavaScript/TypeScript
 node_modules/
 dist/
 build/
-.parcel-cache/
-.next/
-.nuxt/
-.vite/
-.svelte-kit/
-.angular/
-.yarn/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
-report.[0-9]*.json
-.pnpm-store/
-.pnpm-debug.log*
 
-# OS generated files
 .DS_Store
-.Trashes
-ehthumbs.db
 Thumbs.db
-
-# IDEs and other tools
 .idea/
 .vscode/
-*.iml
-*.ipr
-*.iws
-.project
-.classpath
-.settings/
-.history
+*.swp
 
-# Environment variables
 .env
-
-# Generated component files
 ai.json
 ai.tsx
