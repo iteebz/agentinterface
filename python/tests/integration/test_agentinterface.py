@@ -106,6 +106,20 @@ async def test_shaper_fallback_on_llm_failure():
 
 
 @pytest.mark.asyncio
+async def test_shaper_respects_component_allowlist_on_failure():
+    """Fallback honours component allowlist by surfacing failure."""
+
+    def agent(q: str) -> str:
+        return "Text content"
+
+    llm = StubLLM("not valid json {")
+    wrapped = ai(agent, llm=llm, components=["card"])
+
+    with pytest.raises(json.JSONDecodeError):
+        await wrapped("query")
+
+
+@pytest.mark.asyncio
 async def test_ai_respects_component_whitelist():
     """ai() passes allowed components to shaper."""
 
@@ -162,6 +176,42 @@ async def test_streaming_with_callback_integration():
     assert component_event is not None
     assert "callback_url" in component_event["data"]
     assert callback.id in component_event["data"]["callback_url"]
+
+
+@pytest.mark.asyncio
+async def test_streaming_callback_continuation_preserves_kwargs():
+    """Continuation call retains original keyword arguments."""
+
+    calls = []
+
+    async def stream_agent(query: str, *, region: str):
+        calls.append((query, region))
+        yield {"content": query}
+
+    class StubCallback:
+        def endpoint(self) -> str:
+            return "stub://callback"
+
+        async def await_interaction(self, timeout: int = 300) -> dict:
+            return {"action": "select", "data": "North"}
+
+    wrapped = ai(
+        stream_agent,
+        llm=StubLLM('[{"type": "markdown", "data": {"content": "x"}}]'),
+        callback=StubCallback(),
+    )
+
+    result = wrapped("Initial query", region="na")
+    events = []
+    async for evt in result:
+        events.append(evt)
+
+    # First call from initial stream, second from continuation
+    assert len(calls) == 2
+    assert calls[0] == ("Initial query", "na")
+    assert calls[1][1] == "na"
+    assert calls[1][0].startswith("Initial query")
+    assert any(isinstance(evt, dict) and evt.get("type") == "component" for evt in events)
 
 
 @pytest.mark.asyncio

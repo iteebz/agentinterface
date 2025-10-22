@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional, Union
 
-from .callback import Callback, Http
+from .callback import Callback
 from .llms import LLM, create_llm
 from .logger import logger
 
@@ -92,28 +92,45 @@ def ai(
 
         if hasattr(agent_output, "__aiter__"):
             return _stream(
-                agent, agent_output, llm_instance, components, callback, agent_args, timeout
+                agent,
+                agent_output,
+                llm_instance,
+                components,
+                callback,
+                agent_args,
+                agent_kwargs,
+                timeout,
             )
         elif asyncio.iscoroutine(agent_output):
-            return _async(agent, agent_output, llm_instance, components, agent_args)
+            return _async(agent, agent_output, llm_instance, components, agent_args, agent_kwargs)
         else:
-            return _sync(agent, agent_output, llm_instance, components, agent_args)
+            return _sync(agent, agent_output, llm_instance, components, agent_args, agent_kwargs)
 
     return enhanced
 
 
 async def _generate_components(
-    text: str, agent_args: tuple[Any, ...], components: Optional[list[str]], llm: LLM
+    text: str,
+    agent_args: tuple[Any, ...],
+    agent_kwargs: dict[str, Any],
+    components: Optional[list[str]],
+    llm: LLM,
 ) -> list[dict[str, Any]]:
     """Generate components from text via shaper LLM."""
     from .shaper import shape
 
     try:
-        query_context = str(agent_args[0]) if agent_args else "User request"
+        query_context = (
+            str(agent_args[0]) if agent_args else agent_kwargs.get("query", "User request")
+        )
         shaped = await shape(text, {"query": query_context, "components": components}, llm)
         return json.loads(shaped)
     except Exception as e:
         logger.warning(f"Component generation failed, falling back: {e}")
+        if components and "markdown" not in components:
+            if isinstance(e, ValueError) and e.__cause__:
+                raise e.__cause__ from None
+            raise
         return [{"type": "markdown", "data": {"content": text}}]
 
 
@@ -124,6 +141,7 @@ async def _stream(
     components: Optional[list[str]],
     callback: Optional[Callback],
     agent_args: tuple[Any, ...],
+    agent_kwargs: dict[str, Any],
     timeout: int,
 ):
     """Streaming: Passthrough + Collect + Tack-on."""
@@ -138,7 +156,7 @@ async def _stream(
         return
 
     component_array = await _generate_components(
-        collected_text.strip(), agent_args, components, llm
+        collected_text.strip(), agent_args, agent_kwargs, components, llm
     )
 
     if callback:
@@ -149,10 +167,14 @@ async def _stream(
 
         try:
             user_event = await callback.await_interaction(timeout=timeout)
-            query_context = str(agent_args[0]) if agent_args else "User request"
+            query_context = (
+                str(agent_args[0]) if agent_args else agent_kwargs.get("query", "User request")
+            )
             continuation_query = f"{query_context}\n\nUser selected: {user_event['data']}"
-            continuation_agent = ai(agent, llm, components, Http())
-            async for event in continuation_agent(continuation_query, *agent_args[1:]):
+            continuation_agent = ai(agent, llm, components)
+            async for event in continuation_agent(
+                continuation_query, *agent_args[1:], **agent_kwargs
+            ):
                 yield event
         except asyncio.TimeoutError:
             logger.warning("User interaction timed out")
@@ -166,10 +188,13 @@ async def _async(
     llm: LLM,
     components: Optional[list[str]],
     agent_args: tuple[Any, ...],
+    agent_kwargs: dict[str, Any],
 ) -> tuple[Any, list[dict[str, Any]]]:
     """Async agent: returns (text, components) tuple."""
     response = await coroutine
-    component_array = await _generate_components(str(response), agent_args, components, llm)
+    component_array = await _generate_components(
+        str(response), agent_args, agent_kwargs, components, llm
+    )
     return (response, component_array)
 
 
@@ -179,11 +204,14 @@ def _sync(
     llm: LLM,
     components: Optional[list[str]],
     agent_args: tuple[Any, ...],
+    agent_kwargs: dict[str, Any],
 ) -> Awaitable[tuple[Any, list[dict[str, Any]]]]:
     """Sync agent: returns coroutine resolving to (text, components) tuple."""
 
     async def _shape():
-        component_array = await _generate_components(str(response), agent_args, components, llm)
+        component_array = await _generate_components(
+            str(response), agent_args, agent_kwargs, components, llm
+        )
         return (response, component_array)
 
     return _shape()

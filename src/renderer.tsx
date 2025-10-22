@@ -1,6 +1,6 @@
 import React from "react";
 import type { ComponentType } from "react";
-import { CallbackEvent, ComponentJSON } from "./types";
+import { CallbackEvent, ComponentTree, ComponentJSON } from "./types";
 import { Accordion } from "./ai/accordion";
 import { Card } from "./ai/card";
 import { Citation } from "./ai/citation";
@@ -26,7 +26,7 @@ const DEFAULT_COMPONENTS: Record<string, ComponentType<any>> = {
 };
 
 export function render(
-  agentJSON: string,
+  agentJSON: string | ComponentTree,
   components?: Record<string, ComponentType<any>>,
   onCallback?: (event: CallbackEvent) => void,
 ): React.ReactNode {
@@ -73,7 +73,8 @@ export function render(
     return <Component key={key} {...processedData} onCallback={onCallback} />;
   }
 
-  const parsed = JSON.parse(agentJSON);
+  const parsed =
+    typeof agentJSON === "string" ? JSON.parse(agentJSON) : agentJSON;
   return Array.isArray(parsed) ? (
     <div className="space-y-6">
       {parsed.map((item, i) => renderItem(item, i))}

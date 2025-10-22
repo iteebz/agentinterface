@@ -1,7 +1,7 @@
 {
   "name": "agentinterface",
   "version": "1.0.0",
-  "description": "AI agents choose UI components with zero ceremony.",
+  "description": "Agent GUIs",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

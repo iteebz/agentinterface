@@ -24,6 +24,8 @@ export interface ComponentJSON {
 
 export type ComponentArray = ComponentJSON[];
 
+export type ComponentTree = ComponentJSON | ComponentArray;
+
 export interface CallbackEvent {
   type: "click" | "change" | "select" | "toggle";
   component: string;
@@ -33,7 +35,7 @@ export interface CallbackEvent {
 export interface AgentResponse {
   id: string;
   timestamp: number;
-  content: ComponentJSON | ComponentArray;
+  content: ComponentTree;
 }
 
 export interface AgentCanvasProps {

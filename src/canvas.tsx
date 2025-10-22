@@ -5,13 +5,18 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from "react";
-import { AgentResponse, AgentCanvasProps, CallbackEvent } from "./types";
+import {
+  AgentResponse,
+  AgentCanvasProps,
+  CallbackEvent,
+  ComponentTree,
+} from "./types";
 import { render } from "./renderer";
 
 const AUTO_SCROLL_DELAY_MS = 50;
 
 export interface AgentCanvasRef {
-  addResponse: (agentJSON: string) => void;
+  addResponse: (agentJSON: string | ComponentTree) => void;
 }
 
 export const AgentCanvas = forwardRef<AgentCanvasRef, AgentCanvasProps>(
@@ -20,30 +25,33 @@ export const AgentCanvas = forwardRef<AgentCanvasRef, AgentCanvasProps>(
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const addResponse = useCallback(
-      (agentJSON: string) => {
+      (agentJSON: string | ComponentTree) => {
+        let parsed: ComponentTree;
         try {
-          const content = JSON.parse(agentJSON);
-          const response: AgentResponse = {
-            id: `response_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-            timestamp: Date.now(),
-            content,
-          };
-
-          setResponses((prev) => {
-            const updated = [...prev, response];
-            return updated.length > maxResponses
-              ? updated.slice(-maxResponses)
-              : updated;
-          });
-
-          setTimeout(() => {
-            if (scrollRef.current) {
-              scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-            }
-          }, AUTO_SCROLL_DELAY_MS);
+          parsed =
+            typeof agentJSON === "string" ? JSON.parse(agentJSON) : agentJSON;
         } catch (error) {
-          throw new Error(`Invalid JSON response: ${error}`);
+          throw new Error(`Invalid component payload: ${error}`);
         }
+
+        const response: AgentResponse = {
+          id: `response_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+          timestamp: Date.now(),
+          content: parsed,
+        };
+
+        setResponses((prev) => {
+          const updated = [...prev, response];
+          return updated.length > maxResponses
+            ? updated.slice(-maxResponses)
+            : updated;
+        });
+
+        setTimeout(() => {
+          if (scrollRef.current) {
+            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+          }
+        }, AUTO_SCROLL_DELAY_MS);
       },
       [maxResponses],
     );
@@ -70,11 +78,7 @@ export const AgentCanvas = forwardRef<AgentCanvasRef, AgentCanvasProps>(
                 {new Date(response.timestamp).toLocaleString()}
               </div>
               <div className="response-content">
-                {render(
-                  JSON.stringify(response.content),
-                  undefined,
-                  handleCallback,
-                )}
+                {render(response.content, undefined, handleCallback)}
               </div>
             </div>
           ))}

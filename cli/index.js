@@ -9,17 +9,16 @@ import { main as discover } from '../scripts/discover.mjs';
 
 const command = process.argv[2];
 
+if (!command || command === 'help' || command === '--help' || command === '-h') {
+  showHelp();
+  process.exit(0);
+}
+
 switch (command) {
   case 'discover':
     discover();
     break;
-    
-  case 'help':
-  case '--help':
-  case '-h':
-    showHelp();
-    break;
-    
+
   default:
     console.log(`Unknown command: ${command}`);
     showHelp();

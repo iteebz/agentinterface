@@ -19,7 +19,9 @@ function extractValue(node) {
   if (node.kind === ts.SyntaxKind.FalseKeyword) return false;
   
   if (ts.isArrayLiteralExpression(node)) {
-    return node.elements.map(extractValue).filter(Boolean);
+    return node.elements
+      .map(extractValue)
+      .filter((value) => value !== undefined && value !== null);
   }
   
   if (ts.isObjectLiteralExpression(node)) {

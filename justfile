@@ -40,10 +40,15 @@ discover:
     @npx agentinterface discover
 
 build:
+    @npm run build
     @cd python && poetry build
 
 publish: ci build
+    @echo "Publishing to npm..."
+    @npm publish
+    @echo "Publishing to PyPI..."
     @cd python && poetry publish
+    @echo "✓ Published to npm and PyPI"
 
 commits:
     @git --no-pager log --pretty=format:"%h | %ar | %s"

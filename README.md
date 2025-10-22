@@ -1,6 +1,8 @@
 # AgentInterface
 
-Agents choose UI components. Zero ceremony.
+**Agents shape UI. Not templates.**
+
+Agent GUIs without ceremony. LLM selects components. React renders. Infinite composition.
 
 ```bash
 npm install agentinterface  # React renderer + 10 components

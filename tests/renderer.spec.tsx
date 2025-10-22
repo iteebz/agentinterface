@@ -44,31 +44,29 @@ describe("render()", () => {
   });
 
   it("renders nested component structures recursively", () => {
-    const node = render(
-      JSON.stringify({
-        type: "card",
-        data: {
-          title: "Sales summary",
-          content: {
-            type: "table",
-            data: {
-              title: "By region",
-              attributes: [
-                { key: "revenue", label: "Revenue" },
-                { key: "growth", label: "Growth" },
-              ],
-              items: [
-                {
-                  id: "na",
-                  name: "North America",
-                  attributes: { revenue: "$1.2M", growth: "+12%" },
-                },
-              ],
-            },
+    const node = render({
+      type: "card",
+      data: {
+        title: "Sales summary",
+        content: {
+          type: "table",
+          data: {
+            title: "By region",
+            attributes: [
+              { key: "revenue", label: "Revenue" },
+              { key: "growth", label: "Growth" },
+            ],
+            items: [
+              {
+                id: "na",
+                name: "North America",
+                attributes: { revenue: "$1.2M", growth: "+12%" },
+              },
+            ],
           },
         },
-      }),
-    );
+      },
+    });
 
     mount(node);
     expect(screen.getByText("Sales summary")).toBeInTheDocument();
@@ -97,5 +95,16 @@ describe("render()", () => {
     expect(gridRow).not.toBeNull();
     expect(screen.getByText("Bottom card")).toBeInTheDocument();
     expect(screen.getByText("Left")).toBeInTheDocument();
+  });
+
+  it("accepts already parsed component arrays", () => {
+    const node = render([
+      { type: "card", data: { title: "Parsed" } },
+      { type: "markdown", data: { content: "Structured" } },
+    ]);
+
+    mount(node);
+    expect(screen.getByText("Parsed")).toBeInTheDocument();
+    expect(screen.getByText("Structured")).toBeInTheDocument();
   });
 });

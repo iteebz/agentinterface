@@ -1,6 +1,8 @@
 # AgentInterface
 
-Agents choose UI components. Zero ceremony.
+**Agents shape UI. Not templates.**
+
+Agent GUIs without ceremony.
 
 ```bash
 pip install agentinterface
