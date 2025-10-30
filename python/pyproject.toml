@@ -5,7 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [project]
 name = "agentinterface"
 version = "1.0.0"
-description = "Agent GUIs"
+description = "Agent GUIs (Python SDK)"
 authors = [{ name = "Tyson Chan", email = "tyson.chan@proton.me" }]
 readme = "README.md"
 license = "MIT"

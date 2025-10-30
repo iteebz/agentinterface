@@ -88,7 +88,7 @@ describe("autodiscovery CLI", () => {
       `,
     );
 
-    const registry = runDiscovery({ rootDir: tempRoot });
+    const registry = runDiscovery({ rootDir: tempRoot, quiet: true });
 
     const registryPath = path.join(tempRoot, "ai.json");
     expect(fs.existsSync(registryPath)).toBe(true);

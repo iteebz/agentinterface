@@ -89,8 +89,8 @@ function findTsxFiles(dir, maxDepth = 3, currentDepth = 0) {
 }
 
 // Scan directory for components
-function scanComponents(dirPath, source, { maxDepth = 1, rootDir = process.cwd() } = {}) {
-  console.log(`Scanning ${source} components...`);
+function scanComponents(dirPath, source, { maxDepth = 1, rootDir = process.cwd(), quiet = false } = {}) {
+  if (!quiet) console.log(`Scanning ${source} components...`);
   const files = findTsxFiles(dirPath, maxDepth);
   const components = [];
 
@@ -99,7 +99,7 @@ function scanComponents(dirPath, source, { maxDepth = 1, rootDir = process.cwd()
     const metadata = extractMetadata(code, file, rootDir);
     if (metadata) {
       components.push({ ...metadata, source });
-      console.log(`Found [${source}] ${metadata.type}: ${metadata.description}`);
+      if (!quiet) console.log(`Found [${source}] ${metadata.type}: ${metadata.description}`);
     }
   }
 
@@ -154,25 +154,25 @@ function createRegistry(components) {
 }
 
 // Main discovery process
-function runDiscovery({ rootDir = process.cwd() } = {}) {
-  console.log('AUTODISCOVERY: Finding AI components');
+function runDiscovery({ rootDir = process.cwd(), quiet = false } = {}) {
+  if (!quiet) console.log('AUTODISCOVERY: Finding AI components');
 
   let allComponents = [];
 
   if (isAgentInterfaceProject(rootDir)) {
     // AgentInterface project - scan core components only
-    console.log('Detected AgentInterface project');
+    if (!quiet) console.log('Detected AgentInterface project');
     const coreDir = path.join(__dirname, '../src/ai');
-    allComponents = scanComponents(coreDir, 'agentinterface', { rootDir });
+    allComponents = scanComponents(coreDir, 'agentinterface', { rootDir, quiet });
   } else {
     // Consumer project - scan core + project components
     const projectName = getProjectName(rootDir);
-    console.log(`Detected project: ${projectName}`);
+    if (!quiet) console.log(`Detected project: ${projectName}`);
 
     // Core components from node_modules
     const agentInterfacePath = path.join(rootDir, 'node_modules/agentinterface/src/ai');
     const coreComponents = fs.existsSync(agentInterfacePath) ? 
-      scanComponents(agentInterfacePath, 'agentinterface', { rootDir }) : [];
+      scanComponents(agentInterfacePath, 'agentinterface', { rootDir, quiet }) : [];
 
     // Project components
     const projectComponents = [];
@@ -181,8 +181,8 @@ function runDiscovery({ rootDir = process.cwd() } = {}) {
     for (const relativePath of paths) {
       const fullPath = path.join(rootDir, relativePath);
       if (fs.existsSync(fullPath)) {
-        console.log(`Found components at: ${relativePath}`);
-        projectComponents.push(...scanComponents(fullPath, projectName, { rootDir, maxDepth: 2 }));
+        if (!quiet) console.log(`Found components at: ${relativePath}`);
+        projectComponents.push(...scanComponents(fullPath, projectName, { rootDir, maxDepth: 2, quiet }));
       }
     }
 
@@ -190,8 +190,8 @@ function runDiscovery({ rootDir = process.cwd() } = {}) {
   }
 
   if (allComponents.length === 0) {
-    console.log('No components found with metadata exports!');
-    console.log('Ensure components export metadata = { type, description, schema, category }');
+    console.error('No components found with metadata exports!');
+    console.error('Ensure components export metadata = { type, description, schema, category }');
     throw new Error('No components with metadata exports discovered');
   }
 
@@ -200,20 +200,23 @@ function runDiscovery({ rootDir = process.cwd() } = {}) {
   fs.writeFileSync(path.join(rootDir, 'ai.json'), JSON.stringify(registry, null, 2));
 
   // Summary
-  const types = allComponents.map(c => c.type).sort();
-  const sources = [...new Set(allComponents.map(c => c.source))];
+  if (!quiet) {
+    const types = allComponents.map(c => c.type).sort();
+    const sources = [...new Set(allComponents.map(c => c.source))];
 
-  console.log('\nAUTODISCOVERY COMPLETE');
-  console.log(`Found ${allComponents.length} components from ${sources.length} sources`);
-  console.log(`Component types: ${types.join(', ')}`);
-  console.log('Ready for use with protocol() and render()');
+    console.log('\nAUTODISCOVERY COMPLETE');
+    console.log(`Found ${allComponents.length} components from ${sources.length} sources`);
+    console.log(`Component types: ${types.join(', ')}`);
+    console.log('Ready for use with protocol() and render()');
+  }
 
   return registry;
 }
 
 function main() {
   try {
-    runDiscovery();
+    const quiet = process.argv.includes('--quiet') || process.argv.includes('-q');
+    runDiscovery({ quiet });
   } catch (error) {
     const message = error && error.message ? error.message : error;
     console.error(message);
