@@ -1,12 +1,13 @@
 """Universal component callbacks."""
 
 import asyncio
+import logging
 import os
 import uuid
 from threading import Thread
 from typing import Optional, Protocol, runtime_checkable
 
-from .logger import logger
+logger = logging.getLogger(__name__)
 
 ABANDONED_CALLBACK_TIMEOUT = 600
 
@@ -73,8 +74,6 @@ class _HttpCallbackServer:
         except RuntimeError:
             pass
 
-        logger.debug(f"Started HTTP callback server on port {self.port}")
-
     async def _cleanup_abandoned_callbacks(self):
         """Clean up callbacks that have been waiting too long."""
         while True:
@@ -97,7 +96,6 @@ class _HttpCallbackServer:
                         _loop, future = entry
                         if not future.done():
                             _loop.call_soon_threadsafe(future.cancel)
-                        logger.debug(f"Cleaned up abandoned callback: {callback_id}")
 
             except asyncio.CancelledError:
                 break

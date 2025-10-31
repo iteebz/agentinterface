@@ -1,11 +1,13 @@
 """Agent text to component JSON."""
 
 import json
+import logging
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
 from .llms import LLM
-from .logger import logger
+
+logger = logging.getLogger(__name__)
 
 _REGISTRY_CACHE: Optional[dict[str, Any]] = None
 
@@ -72,7 +74,8 @@ def _validate_component_tree(components: Any, allowed: Optional[Iterable[str]] =
         if data is None:
             data = {}
         if not isinstance(data, dict):
-            raise ValueError(f"Component '{comp_type}' data must be an object")
+            actual_type = type(data).__name__
+            raise ValueError(f"Component '{comp_type}' data must be object, got {actual_type}")
 
         required_fields = []
         if schema_entry:
@@ -84,8 +87,10 @@ def _validate_component_tree(components: Any, allowed: Optional[Iterable[str]] =
 
         missing = [field for field in required_fields if field not in data]
         if missing:
+            provided = ", ".join(sorted(data.keys())) or "(empty)"
+            required = ", ".join(sorted(required_fields))
             raise ValueError(
-                f"Component '{comp_type}' missing required data fields: {', '.join(sorted(missing))}"
+                f"Component '{comp_type}' missing required fields. Required: [{required}], provided: [{provided}]"
             )
 
     for index, item in enumerate(components):
@@ -129,10 +134,11 @@ async def _generate_component(response: str, context: dict[str, Any], llm: LLM) 
     try:
         components = json.loads(result)
     except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON from LLM: {e}") from e
+        raise ValueError(f"LLM returned invalid JSON: {e}") from e
 
     if not isinstance(components, list):
-        raise ValueError("LLM must return array")
+        actual_type = type(components).__name__
+        raise ValueError(f"LLM returned {actual_type}, expected array")
 
     allowed_components = context.get("components") if context else None
     _validate_component_tree(components, allowed_components)

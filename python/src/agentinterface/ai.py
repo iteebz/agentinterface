@@ -2,12 +2,14 @@
 
 import asyncio
 import json
+import logging
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional, Union
 
 from .callback import Callback
 from .llms import LLM, create_llm
-from .logger import logger
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_INTERACTION_TIMEOUT = 300
 

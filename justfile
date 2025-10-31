@@ -52,8 +52,5 @@ publish: ci build
     @cd python && poetry publish
     @echo "✓ Published to npm and PyPI"
 
-repomix:
-    repomix
-
 commits:
     @git --no-pager log --pretty=format:"%h | %ar | %s"

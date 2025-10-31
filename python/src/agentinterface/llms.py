@@ -1,11 +1,12 @@
 """LLM providers with key rotation."""
 
+import logging
 import os
 import time
 from pathlib import Path
 from typing import Any, Callable, Optional, Protocol, Union, runtime_checkable
 
-from .logger import logger
+logger = logging.getLogger(__name__)
 
 try:
     from dotenv import load_dotenv
@@ -71,7 +72,7 @@ class Rotator:
         if now - self.last >= 1:
             self.idx = (self.idx + 1) % len(self.keys)
             self.last = now
-            logger.warning(f"Rotated {self.service} key to index {self.idx}")
+            logger.debug(f"Rotated {self.service} key to index {self.idx}")
             return True
         return False
 

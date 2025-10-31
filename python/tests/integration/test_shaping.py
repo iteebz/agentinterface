@@ -32,7 +32,7 @@ async def test_shape_validates_component_contract():
 async def test_shape_rejects_non_array_output():
     """LLM returning object (not array) raises ValueError."""
     llm = StubLLM('{"type": "markdown"}')
-    with pytest.raises(ValueError, match="must return array"):
+    with pytest.raises(ValueError, match="expected array"):
         await shape("Input", llm=llm)
 
 
@@ -40,7 +40,7 @@ async def test_shape_rejects_non_array_output():
 async def test_shape_rejects_invalid_json():
     """Invalid JSON from LLM raises immediately."""
     llm = StubLLM("not json {")
-    with pytest.raises(ValueError, match="Invalid JSON"):
+    with pytest.raises(ValueError, match="returned invalid JSON"):
         await shape("Input", llm=llm)
 
 
@@ -178,7 +178,7 @@ def test_validate_component_tree_rejects_non_dict_element():
 
 def test_validate_component_tree_data_must_be_dict():
     """Data field must be object, not array."""
-    with pytest.raises(ValueError, match="data must be an object"):
+    with pytest.raises(ValueError, match="must be object"):
         _validate_component_tree([{"type": "markdown", "data": ["invalid"]}])
 
 
