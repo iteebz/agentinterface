@@ -21,6 +21,4 @@ Thumbs.db
 .vscode/
 *.swp
 
-repomix-output.*
-
 ai.json

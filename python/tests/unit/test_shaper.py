@@ -1,10 +1,13 @@
 """shape() contract tests - LLM output validation."""
 
 import json
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
-from agentinterface.shaper import shape
+from agentinterface.shaper import find_registry_path, shape
 
 
 class StubLLM:
@@ -83,3 +86,27 @@ async def test_shape_horizontal_composition():
     data = json.loads(shaped)
     assert isinstance(data[0], list)
     assert len(data[0]) == 2
+
+
+def test_find_registry_path_in_cwd():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        registry = Path(tmpdir) / "ai.json"
+        registry.write_text("{}")
+        with patch("agentinterface.shaper.Path.cwd", return_value=Path(tmpdir)):
+            assert find_registry_path() == registry
+
+
+def test_find_registry_path_in_parent():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        registry = Path(tmpdir) / "ai.json"
+        registry.write_text("{}")
+        subdir = Path(tmpdir) / "sub" / "deep"
+        subdir.mkdir(parents=True)
+        with patch("agentinterface.shaper.Path.cwd", return_value=subdir):
+            assert find_registry_path() == registry
+
+
+def test_find_registry_path_not_found():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with patch("agentinterface.shaper.Path.cwd", return_value=Path(tmpdir)):
+            assert find_registry_path() is None

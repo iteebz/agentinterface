@@ -12,14 +12,20 @@ logger = logging.getLogger(__name__)
 _REGISTRY_CACHE: Optional[dict[str, Any]] = None
 
 
-def _load_registry() -> dict[str, Any]:
+def find_registry_path() -> Optional[Path]:
     """Search upward for ai.json like git searches for .git."""
     current = Path.cwd()
     for path in [current, *current.parents]:
         registry_path = path / "ai.json"
         if registry_path.exists():
-            break
-    else:
+            return registry_path
+    return None
+
+
+def _load_registry() -> dict[str, Any]:
+    """Load component registry from ai.json."""
+    registry_path = find_registry_path()
+    if not registry_path:
         logger.warning("Component registry ai.json not found")
         return {}
 

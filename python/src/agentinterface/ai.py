@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-from pathlib import Path
 from typing import Any, Awaitable, Callable, Optional, Union
 
 from .callback import Callback
@@ -16,13 +15,15 @@ DEFAULT_INTERACTION_TIMEOUT = 300
 
 def protocol(components: Optional[list[str]] = None) -> str:
     """Generate LLM component instructions from registry or component list."""
+    from .shaper import find_registry_path
+
     if components:
         component_specs = [f"{comp}: Component" for comp in components]
     else:
-        registry_path = Path.cwd() / "ai.json"
+        registry_path = find_registry_path()
         component_specs = []
 
-        if registry_path.exists():
+        if registry_path:
             try:
                 registry = json.loads(registry_path.read_text())
                 components_data = registry.get("components", {})
@@ -173,7 +174,7 @@ async def _stream(
                 str(agent_args[0]) if agent_args else agent_kwargs.get("query", "User request")
             )
             continuation_query = f"{query_context}\n\nUser selected: {user_event['data']}"
-            continuation_agent = ai(agent, llm, components)
+            continuation_agent = ai(agent, llm, components, callback, timeout)
             async for event in continuation_agent(
                 continuation_query, *agent_args[1:], **agent_kwargs
             ):

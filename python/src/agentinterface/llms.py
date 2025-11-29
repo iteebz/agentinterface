@@ -37,6 +37,9 @@ class Rotator:
         """Load all keys for service."""
         keys = []
 
+        if key := os.getenv(f"{self.service}_API_KEY"):
+            keys.append(key)
+
         for i in range(1, 11):
             if key := os.getenv(f"{self.service}_API_KEY_{i}"):
                 keys.append(key)
@@ -48,6 +51,8 @@ class Rotator:
             aliases = ["CLAUDE_API_KEY"]
 
         for alias in aliases:
+            if (key := os.getenv(alias)) and key not in keys:
+                keys.append(key)
             for i in range(1, 11):
                 if (key := os.getenv(f"{alias}_{i}")) and key not in keys:
                     keys.append(key)
@@ -102,35 +107,6 @@ async def with_rotation(service: str, fn: Callable, *args, **kwargs) -> Any:
 
     logger.error(f"All {service} attempts failed")
     raise err
-
-
-def detect_api_key(service: str) -> Optional[str]:
-    """API key detection with rotation support."""
-
-    patterns = [
-        f"{service.upper()}_API_KEY",
-        f"{service.upper()}_KEY",
-        f"{service}_API_KEY",
-        f"{service}_KEY",
-    ]
-
-    if service == "gemini":
-        patterns.extend(["GOOGLE_API_KEY", "GOOGLE_KEY"])
-    elif service == "anthropic":
-        patterns.extend(["CLAUDE_API_KEY", "CLAUDE_KEY"])
-
-    for pattern in patterns:
-        if pattern in os.environ:
-            return os.environ[pattern]
-
-    for pattern in patterns:
-        if pattern.endswith("_API_KEY"):
-            for i in range(1, 11):
-                rotation_key = f"{pattern}_{i}"
-                if rotation_key in os.environ:
-                    return os.environ[rotation_key]
-
-    return None
 
 
 @runtime_checkable

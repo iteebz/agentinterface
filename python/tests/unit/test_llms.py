@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agentinterface.llms import LLM, Rotator, create_llm, detect_api_key
+from agentinterface.llms import LLM, Rotator, create_llm
 
 
 class MockLLM(LLM):
@@ -59,7 +59,7 @@ async def test_llm_protocol_compliance():
 
 
 def test_rotator_init():
-    with patch.dict(os.environ, {"OPENAI_API_KEY_1": "key1"}):
+    with patch.dict(os.environ, {"OPENAI_API_KEY_1": "key1"}, clear=True):
         rot = Rotator("openai")
         assert rot.service == "OPENAI"
         assert rot.keys == ["key1"]
@@ -84,7 +84,7 @@ def test_rotator_load_multiple_keys():
 
 
 def test_rotator_key_property():
-    with patch.dict(os.environ, {"OPENAI_API_KEY_1": "key1"}, clear=False):
+    with patch.dict(os.environ, {"OPENAI_API_KEY_1": "key1"}, clear=True):
         rot = Rotator("openai")
         assert rot.key == "key1"
 
@@ -183,35 +183,19 @@ def test_rotator_rotate_wraps_around():
         assert rot.idx == 0
 
 
-def test_detect_api_key_primary_pattern():
-    with patch.dict(os.environ, {"OPENAI_API_KEY": "primary_key"}, clear=True):
-        key = detect_api_key("openai")
-        assert key == "primary_key"
+def test_rotator_load_base_key():
+    with patch.dict(os.environ, {"OPENAI_API_KEY": "base_key"}, clear=True):
+        rot = Rotator("openai")
+        assert rot.key == "base_key"
 
 
-def test_detect_api_key_rotation_pattern():
-    with patch.dict(
-        os.environ,
-        {"OPENAI_API_KEY_1": "rot1", "OPENAI_API_KEY_2": "rot2"},
-        clear=True,
-    ):
-        key = detect_api_key("openai")
-        assert key in ["rot1", "rot2"]
-
-
-def test_detect_api_key_gemini_alias():
+def test_rotator_load_gemini_alias():
     with patch.dict(os.environ, {"GOOGLE_API_KEY": "google_key"}, clear=True):
-        key = detect_api_key("gemini")
-        assert key == "google_key"
+        rot = Rotator("gemini")
+        assert rot.key == "google_key"
 
 
-def test_detect_api_key_anthropic_alias():
+def test_rotator_load_anthropic_alias():
     with patch.dict(os.environ, {"CLAUDE_API_KEY": "claude_key"}, clear=True):
-        key = detect_api_key("anthropic")
-        assert key == "claude_key"
-
-
-def test_detect_api_key_none():
-    with patch.dict(os.environ, {}, clear=True):
-        key = detect_api_key("openai")
-        assert key is None
+        rot = Rotator("anthropic")
+        assert rot.key == "claude_key"

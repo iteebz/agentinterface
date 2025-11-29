@@ -7,7 +7,25 @@ from unittest.mock import AsyncMock
 import pytest
 
 from agentinterface import ai
+from agentinterface.ai import _extract_text
 from agentinterface.callback import Http
+
+
+def test_extract_text():
+    assert _extract_text("hello") == "hello"
+    assert _extract_text({"content": "hello"}) == "hello"
+    assert _extract_text({"text": "hello"}) == "hello"
+    assert _extract_text({"message": "hello"}) == "hello"
+    assert _extract_text({"output": "hello"}) == "hello"
+    assert _extract_text({"data": "hello"}) == "hello"
+    assert _extract_text({"content": "first", "text": "second"}) == "first"
+    assert _extract_text({}) == ""
+    assert _extract_text(None) == ""
+
+    class Event:
+        content = "from attr"
+
+    assert _extract_text(Event()) == "from attr"
 
 
 class StubLLM:
@@ -189,10 +207,16 @@ async def test_streaming_callback_continuation_preserves_kwargs():
         yield {"content": query}
 
     class StubCallback:
+        def __init__(self):
+            self._called = False
+
         def endpoint(self) -> str:
             return "stub://callback"
 
         async def await_interaction(self, timeout: int = 300) -> dict:
+            if self._called:
+                raise asyncio.TimeoutError()
+            self._called = True
             return {"action": "select", "data": "North"}
 
     wrapped = ai(
@@ -212,27 +236,6 @@ async def test_streaming_callback_continuation_preserves_kwargs():
     assert calls[1][1] == "na"
     assert calls[1][0].startswith("Initial query")
     assert any(isinstance(evt, dict) and evt.get("type") == "component" for evt in events)
-
-
-@pytest.mark.asyncio
-async def test_ai_extract_text_from_dict_events():
-    """ai() extracts text from dict events with various keys."""
-
-    async def stream_agent(q: str):
-        yield {"content": "From content key"}
-        yield {"text": "From text key"}
-        yield {"message": "From message key"}
-
-    wrapped = ai(
-        stream_agent, llm=StubLLM('[{"type": "markdown", "data": {"content": "extracted"}}]')
-    )
-    result = wrapped("query")
-
-    event_count = 0
-    async for _ in result:
-        event_count += 1
-
-    assert event_count >= 4
 
 
 @pytest.mark.asyncio

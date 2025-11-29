@@ -7,7 +7,3 @@ from .llms import LLM, create_llm
 from .shaper import shape
 
 __all__ = ["ai", "protocol", "shape", "create_llm", "LLM", "Callback", "Http"]
-
-import logging
-
-logging.basicConfig(format="%(message)s", level=logging.INFO)

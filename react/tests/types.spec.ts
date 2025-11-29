@@ -8,11 +8,32 @@ describe("formatLLM", () => {
     data: {},
   };
 
-  it("maps known actions to readable phrases", () => {
+  it("maps all action types to readable phrases", () => {
     expect(formatLLM(baseEvent)).toBe("User clicked card");
-    expect(
-      formatLLM({ ...baseEvent, type: "change", data: { label: "Revenue" } }),
-    ).toBe("User changed card: Revenue");
+    expect(formatLLM({ ...baseEvent, type: "change" })).toBe(
+      "User changed card",
+    );
+    expect(formatLLM({ ...baseEvent, type: "select" })).toBe(
+      "User selected card",
+    );
+    expect(formatLLM({ ...baseEvent, type: "toggle" })).toBe(
+      "User toggled card",
+    );
+  });
+
+  it("includes detail from data fields", () => {
+    expect(formatLLM({ ...baseEvent, data: { title: "Revenue" } })).toBe(
+      "User clicked card: Revenue",
+    );
+    expect(formatLLM({ ...baseEvent, data: { text: "Submit" } })).toBe(
+      "User clicked card: Submit",
+    );
+    expect(formatLLM({ ...baseEvent, data: { id: "btn-123" } })).toBe(
+      "User clicked card: btn-123",
+    );
+    expect(formatLLM({ ...baseEvent, data: { label: "Option A" } })).toBe(
+      "User clicked card: Option A",
+    );
   });
 
   it("falls back gracefully when no detail present", () => {
